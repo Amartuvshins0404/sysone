@@ -1,6 +1,6 @@
 {
   "name": "@sysonejs/mongo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MongoDB source for sysonejs.",
   "license": "MIT",
   "type": "module",
