@@ -4,10 +4,7 @@ import type { WireList, WireListParams, WireModelMeta, WireOne, WireRow } from "
 export type Row = { [field: string]: unknown }
 export type Body = WireList | WireOne | null
 
-interface Entity {
-  readonly row: Row | null
-  readonly at: number
-}
+type Entity = readonly [row: Row | null, at: number]
 
 export interface Snapshot {
   readonly items: readonly Row[]
@@ -56,12 +53,12 @@ export function createCache(request: Request) {
   const readers = new Map<string, Set<Query>>()
 
   const table = (m: string) => entities.get(m) ?? entities.set(m, new Map()).get(m)!
-  const rowOf = (m: string, id: string) => table(m).get(id)?.row
+  const rowOf = (m: string, id: string) => table(m).get(id)?.[0]
   const link = (m: string, r: string): readonly string[] => metas.get(m)?.links?.[r] ?? []
   const touch = (m: string) => readers.get(m)?.forEach((q) => q.changed())
   const put = (m: string, id: string, row: Row | null, at: number) => {
     const t = table(m)
-    if ((t.get(id)?.at ?? 0) <= at) t.set(id, { row, at })
+    if ((t.get(id)?.[1] ?? 0) <= at) t.set(id, [row, at])
   }
 
   function ingest(m: string, body: Body, at: number): string[] {
@@ -212,5 +209,5 @@ export function createCache(request: Request) {
     return row
   }
 
-  return { query, write }
+  return [query, write] as const
 }

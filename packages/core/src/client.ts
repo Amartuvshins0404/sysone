@@ -64,7 +64,7 @@ export type Client<A extends HasContract> = {
 export { encodeQuery }
 
 export function createClient<A extends HasContract>(options: ClientOptions): Client<A> {
-  const cache = createCache(async (method, m, id, query, body) => {
+  const [query, write] = createCache(async (method, m, id, query, body) => {
     const send = options.fetch ?? fetch
     const url = `${options.url}/${m}${id === undefined ? "" : "/" + encodeURIComponent(text(id))}${query ? "?" + query : ""}`
     const headers = { "content-type": "application/json", ...(await options.headers?.()) }
@@ -82,11 +82,11 @@ export function createClient<A extends HasContract>(options: ClientOptions): Cli
   })
   return new Proxy({} as Client<A>, {
     get: (_, m: string) => ({
-      create: (data: object) => cache.write(m, "POST", undefined, data),
-      update: (id: unknown, patch: object) => cache.write(m, "PATCH", id, patch),
-      delete: (id: unknown) => cache.write(m, "DELETE", id),
-      watchList: (p: WireListParams = {}) => cache.query(m, p),
-      watchGet: (id: unknown, o?: { readonly include?: readonly string[] }) => cache.query(m, undefined, id, o?.include),
+      create: (data: object) => write(m, "POST", undefined, data),
+      update: (id: unknown, patch: object) => write(m, "PATCH", id, patch),
+      delete: (id: unknown) => write(m, "DELETE", id),
+      watchList: (p: WireListParams = {}) => query(m, p),
+      watchGet: (id: unknown, o?: { readonly include?: readonly string[] }) => query(m, undefined, id, o?.include),
     }),
   })
 }
