@@ -4,7 +4,7 @@ import { category, project, secret, task } from "./model.ts"
 const day = (d: number) => new Date(Date.UTC(2026, 0, d))
 
 const categories = [
-  { id: 1, name: "Apple", parentId: null, active: true, size: 10n, createdAt: day(1) },
+  { id: 1, name: "Apple", parentId: null, active: true, size: 10n, createdAt: day(1), internal: "never sent" },
   { id: 2, name: "Banana", parentId: 1, active: true, size: 20n, createdAt: day(2) },
   { id: 3, name: "Cherry", parentId: 1, active: false, size: 30n, createdAt: day(1) },
   { id: 4, name: "Date 100%", parentId: 2, active: true, size: 40n, createdAt: day(3) },

@@ -1,0 +1,321 @@
+{
+  "cases": [
+    {
+      "name": "limit 0",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=0"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_limit",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "limit not a number",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=abc"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_limit",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "sort on a field outside the allowlist",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=active"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_sort",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "sort on a nullable field",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=parentId"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_sort",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "more than 3 sort keys",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=name,createdAt,-id,size"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_sort",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "filter outside the allowlist",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[name]=Apple"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_filter",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "range on a boolean",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[active][gt]=true"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_filter",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "unknown filter operator",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId][eq]=1"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_filter",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "filter value of the wrong type",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId]=abc"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_value",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "date filter that is not a date",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[createdAt][gte]=soon"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_value",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "bigint filter that is not an integer",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[size][gt]=1.5"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_value",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "search on a model without search fields",
+      "request": {
+        "method": "GET",
+        "path": "/api/task?search=x",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_search",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "id of the wrong type",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/abc"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_value",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "missing id",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/999"
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "PUT is not allowed",
+      "request": {
+        "method": "PUT",
+        "path": "/api/category/1",
+        "body": {}
+      },
+      "status": 405,
+      "body": {
+        "error": {
+          "code": "method_not_allowed",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "POST to an item is not allowed",
+      "request": {
+        "method": "POST",
+        "path": "/api/category/1",
+        "body": {}
+      },
+      "status": 405,
+      "body": {
+        "error": {
+          "code": "method_not_allowed",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "PATCH to a collection is not allowed",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/category",
+        "body": {}
+      },
+      "status": 405,
+      "body": {
+        "error": {
+          "code": "method_not_allowed",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "invalid body is 422 with issues by path",
+      "request": {
+        "method": "POST",
+        "path": "/api/category",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "name": "",
+          "active": true,
+          "parentId": null
+        }
+      },
+      "status": 422,
+      "body": {
+        "error": {
+          "code": "invalid_body",
+          "message": "$string",
+          "issues": [
+            {
+              "path": [
+                "name"
+              ],
+              "message": "$string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "body of the wrong shape is 422",
+      "request": {
+        "method": "POST",
+        "path": "/api/category",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": [
+          1,
+          2
+        ]
+      },
+      "status": 422,
+      "body": {
+        "error": {
+          "code": "invalid_body",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "unknown model falls through",
+      "request": {
+        "method": "GET",
+        "path": "/api/nope"
+      },
+      "status": 404
+    },
+    {
+      "name": "path below an item falls through",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/1/extra"
+      },
+      "status": 404
+    }
+  ]
+}

@@ -1,0 +1,294 @@
+{
+  "cases": [
+    {
+      "name": "date range gte and lt",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[createdAt][gte]=2026-01-02T00:00:00.000Z&filter[createdAt][lt]=2026-01-03T00:00:00.000Z"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 2
+          },
+          {
+            "id": 5
+          },
+          {
+            "id": 8
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "bigint range gt",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[size][gt]=100"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5
+          },
+          {
+            "id": 11
+          },
+          {
+            "id": 12
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "bigint range keeps precision above 2^53",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[size][gte]=9007199254740993"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "null filter",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId]=null"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 5
+          },
+          {
+            "id": 7
+          },
+          {
+            "id": 10
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "repeated filter is any-of",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId]=1&filter[parentId]=2"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 4
+          },
+          {
+            "id": 8
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "null and a value together",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId]=null&filter[parentId]=1"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 5
+          },
+          {
+            "id": 7
+          },
+          {
+            "id": 10
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "boolean filter",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[active]=false"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 3
+          },
+          {
+            "id": 6
+          },
+          {
+            "id": 9
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "two filters are ANDed",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[active]=false&filter[parentId]=3"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 6
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "search % is literal",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=%25"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 4
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "search _ is literal",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=_"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "search is case-insensitive",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=APP"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "search contains",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=an"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 2
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "search with a filter",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=e&filter[active]=false"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 3
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "blank search is ignored",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=%20&limit=2"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          }
+        ],
+        "next": "$string"
+      }
+    }
+  ]
+}

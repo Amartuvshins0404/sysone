@@ -1,0 +1,513 @@
+{
+  "cases": [
+    {
+      "name": "scoped model denies anonymous reads",
+      "request": {
+        "method": "GET",
+        "path": "/api/project"
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "list only returns the caller's tenant",
+      "request": {
+        "method": "GET",
+        "path": "/api/project",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "p1"
+          },
+          {
+            "id": "p2"
+          },
+          {
+            "id": "p4"
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "other tenant sees only its rows",
+      "request": {
+        "method": "GET",
+        "path": "/api/project",
+        "headers": {
+          "x-tenant": "t2",
+          "x-user": "u3",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "p3",
+            "tenantId": "t2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "filter inside the scope",
+      "request": {
+        "method": "GET",
+        "path": "/api/project?filter[archived]=true",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": "p4"
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "get out of scope is 404, not 403",
+      "request": {
+        "method": "GET",
+        "path": "/api/project/p3",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "get in scope",
+      "request": {
+        "method": "GET",
+        "path": "/api/project/p1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": "p1",
+          "name": "Alpha"
+        }
+      }
+    },
+    {
+      "name": "create stamps tenant and owner, ignores non-write fields",
+      "request": {
+        "method": "POST",
+        "path": "/api/project",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        },
+        "body": {
+          "name": "New",
+          "tenantId": "t2",
+          "ownerId": "u2"
+        }
+      },
+      "status": 201,
+      "body": {
+        "item": {
+          "id": "$string",
+          "name": "New",
+          "tenantId": "t1",
+          "ownerId": "u1",
+          "archived": false
+        }
+      },
+      "save": {
+        "created": "item.id"
+      }
+    },
+    {
+      "name": "created row is invisible to another tenant",
+      "request": {
+        "method": "GET",
+        "path": "/api/project/{{created}}",
+        "headers": {
+          "x-tenant": "t2",
+          "x-user": "u3",
+          "x-role": "member"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "viewer cannot create",
+      "request": {
+        "method": "POST",
+        "path": "/api/project",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u5",
+          "x-role": "viewer"
+        },
+        "body": {
+          "name": "x"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "update out of the owner scope is 404",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/project/p2",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        },
+        "body": {
+          "name": "Mine"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "update of another tenant is 404 even for admin",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/project/p3",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "name": "x"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "update in scope keeps fields it did not send (no default re-applied)",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/project/p4",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        },
+        "body": {
+          "name": "Delta 2"
+        }
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": "p4",
+          "name": "Delta 2",
+          "archived": true,
+          "tenantId": "t1"
+        }
+      }
+    },
+    {
+      "name": "update cannot move a row out of its tenant",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/project/p1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        },
+        "body": {
+          "tenantId": "t2"
+        }
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": "p1",
+          "tenantId": "t1"
+        }
+      }
+    },
+    {
+      "name": "member cannot delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/project/{{created}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "delete of another tenant is 404",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/project/p3",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "delete in scope",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/project/{{created}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 204
+    },
+    {
+      "name": "delete again is 404",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/project/{{created}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "deleted row is gone",
+      "request": {
+        "method": "GET",
+        "path": "/api/project/{{created}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "not_found",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "model without access denies list",
+      "request": {
+        "method": "GET",
+        "path": "/api/secret",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "model without access denies get",
+      "request": {
+        "method": "GET",
+        "path": "/api/secret/1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "model without access denies create",
+      "request": {
+        "method": "POST",
+        "path": "/api/secret",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "value": "x"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "model without access denies delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/secret/1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "public read model denies anonymous create",
+      "request": {
+        "method": "POST",
+        "path": "/api/category",
+        "body": {
+          "name": "x",
+          "active": true
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "public read model denies member update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/category/1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        },
+        "body": {
+          "name": "x"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "public read model denies member delete",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/category/1",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "$string"
+        }
+      }
+    }
+  ]
+}

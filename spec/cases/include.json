@@ -1,0 +1,211 @@
+{
+  "cases": [
+    {
+      "name": "belongs-to include is batched into included",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[parentId]=1&include=parent"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": null,
+        "included": {
+          "category": [
+            {
+              "id": 1,
+              "name": "Apple"
+            }
+          ]
+        },
+        "meta": {
+          "category": {
+            "id": "id",
+            "types": {
+              "size": "bigint",
+              "createdAt": "date"
+            },
+            "links": {
+              "parent": [
+                "category",
+                "parentId"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "no include means no included key",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=1"
+      },
+      "status": 200,
+      "body": {
+        "included": "$absent",
+        "meta": {
+          "category": {
+            "id": "id",
+            "types": {
+              "size": "bigint",
+              "createdAt": "date"
+            },
+            "links": {
+              "parent": [
+                "category",
+                "parentId"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "included rows pass the target's read rule (tenant t1)",
+      "request": {
+        "method": "GET",
+        "path": "/api/task?include=project",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 4
+          }
+        ],
+        "included": {
+          "project": [
+            {
+              "id": "p1",
+              "tenantId": "t1"
+            },
+            {
+              "id": "p2",
+              "tenantId": "t1"
+            }
+          ]
+        },
+        "meta": {
+          "task": {
+            "id": "id",
+            "links": {
+              "project": [
+                "project",
+                "projectId"
+              ]
+            }
+          },
+          "project": {
+            "id": "id"
+          }
+        }
+      }
+    },
+    {
+      "name": "included rows pass the target's read rule (tenant t2)",
+      "request": {
+        "method": "GET",
+        "path": "/api/task?include=project",
+        "headers": {
+          "x-tenant": "t2",
+          "x-user": "u3",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "included": {
+          "project": [
+            {
+              "id": "p3",
+              "tenantId": "t2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "get with include of an out-of-scope target",
+      "request": {
+        "method": "GET",
+        "path": "/api/task/2?include=project",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u1",
+          "x-role": "member"
+        }
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": 2,
+          "projectId": "p3"
+        },
+        "included": {
+          "project": []
+        }
+      }
+    },
+    {
+      "name": "get with include",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/4?include=parent"
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": 4,
+          "parentId": 2
+        },
+        "included": {
+          "category": [
+            {
+              "id": 2,
+              "name": "Banana"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "unknown include",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?include=nope"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_include",
+          "message": "$string"
+        }
+      }
+    }
+  ]
+}

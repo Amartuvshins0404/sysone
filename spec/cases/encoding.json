@@ -1,0 +1,86 @@
+{
+  "cases": [
+    {
+      "name": "bigint is a string, date is ISO, meta lists both",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/5"
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": 5,
+          "name": "Elder_berry",
+          "parentId": null,
+          "active": true,
+          "size": "9007199254740993",
+          "createdAt": "2026-01-02T00:00:00.000Z"
+        },
+        "meta": {
+          "category": {
+            "id": "id",
+            "types": {
+              "size": "bigint",
+              "createdAt": "date"
+            },
+            "links": {
+              "parent": [
+                "category",
+                "parentId"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "list rows are encoded the same way",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?filter[size][gte]=9007199254740993"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5,
+            "size": "9007199254740993",
+            "createdAt": "2026-01-02T00:00:00.000Z"
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "columns outside the schema never leave the server",
+      "request": {
+        "method": "GET",
+        "path": "/api/category/1"
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "id": 1,
+          "name": "Apple",
+          "internal": "$absent"
+        }
+      }
+    },
+    {
+      "name": "next is an opaque string while more rows exist",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=1"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          }
+        ],
+        "next": "$string"
+      }
+    }
+  ]
+}

@@ -1,0 +1,415 @@
+{
+  "cases": [
+    {
+      "name": "byName page 1",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=name&limit=5"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 4
+          },
+          {
+            "id": 5
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "byName0": "next"
+      }
+    },
+    {
+      "name": "byName page 2",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=name&limit=5&cursor={{byName0}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 6
+          },
+          {
+            "id": 7
+          },
+          {
+            "id": 8
+          },
+          {
+            "id": 9
+          },
+          {
+            "id": 10
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "byName1": "next"
+      }
+    },
+    {
+      "name": "byName page 3",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=name&limit=5&cursor={{byName1}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 11
+          },
+          {
+            "id": 12
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "byNewest page 1",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt&limit=5"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 12
+          },
+          {
+            "id": 9
+          },
+          {
+            "id": 6
+          },
+          {
+            "id": 4
+          },
+          {
+            "id": 11
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "byNewest0": "next"
+      }
+    },
+    {
+      "name": "byNewest page 2",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt&limit=5&cursor={{byNewest0}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 8
+          },
+          {
+            "id": 5
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 10
+          },
+          {
+            "id": 7
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "byNewest1": "next"
+      }
+    },
+    {
+      "name": "byNewest page 3",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt&limit=5&cursor={{byNewest1}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 3
+          },
+          {
+            "id": 1
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "multiSort page 1",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt,name&limit=5"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 4
+          },
+          {
+            "id": 6
+          },
+          {
+            "id": 9
+          },
+          {
+            "id": 12
+          },
+          {
+            "id": 2
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "multiSort0": "next"
+      }
+    },
+    {
+      "name": "multiSort page 2",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt,name&limit=5&cursor={{multiSort0}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5
+          },
+          {
+            "id": 8
+          },
+          {
+            "id": 11
+          },
+          {
+            "id": 1
+          },
+          {
+            "id": 3
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "multiSort1": "next"
+      }
+    },
+    {
+      "name": "multiSort page 3",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-createdAt,name&limit=5&cursor={{multiSort1}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 7
+          },
+          {
+            "id": 10
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "searchPaged page 1",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=e&sort=name&limit=3"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 4
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "searchPaged0": "next"
+      }
+    },
+    {
+      "name": "searchPaged page 2",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=e&sort=name&limit=3&cursor={{searchPaged0}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 5
+          },
+          {
+            "id": 7
+          },
+          {
+            "id": 8
+          }
+        ],
+        "next": "$string"
+      },
+      "save": {
+        "searchPaged1": "next"
+      }
+    },
+    {
+      "name": "searchPaged page 3",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?search=e&sort=name&limit=3&cursor={{searchPaged1}}"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 10
+          },
+          {
+            "id": 12
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "default sort is id ascending with id tiebreak",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=3"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          }
+        ],
+        "next": "$string"
+      }
+    },
+    {
+      "name": "limit above maxLimit is clamped",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?limit=1000"
+      },
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1
+          },
+          {
+            "id": 2
+          },
+          {
+            "id": 3
+          },
+          {
+            "id": 4
+          },
+          {
+            "id": 5
+          },
+          {
+            "id": 6
+          },
+          {
+            "id": 7
+          },
+          {
+            "id": 8
+          },
+          {
+            "id": 9
+          },
+          {
+            "id": 10
+          },
+          {
+            "id": 11
+          },
+          {
+            "id": 12
+          }
+        ],
+        "next": null
+      }
+    },
+    {
+      "name": "cursor is tied to its sort",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?sort=-name&limit=5&cursor={{byName0}}"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_cursor",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "cursor that is not base64 json",
+      "request": {
+        "method": "GET",
+        "path": "/api/category?cursor=not-a-cursor"
+      },
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "invalid_cursor",
+          "message": "$string"
+        }
+      }
+    }
+  ]
+}
