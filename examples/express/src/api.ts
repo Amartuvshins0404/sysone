@@ -32,14 +32,23 @@ const tasks = [
   { id: 4, projectId: "p1", title: "Plan" },
 ]
 
+const secrets = [{ id: 1, value: "hidden" }]
+
+export const seed = { categories, projects, tasks, secrets }
+export type Seed = typeof seed
+
+const sources = {
+  "drizzle-pg": async () => (await import("./sources/drizzle.ts")).pgModels(seed),
+  "drizzle-mysql": async () => (await import("./sources/drizzle.ts")).mysqlModels(seed),
+}
+
+const source = process.env.SOURCE as keyof typeof sources | undefined
+
 export const api = sysone({
   basePath: "/api",
-  models: [
-    category.from(memory(categories)),
-    project.from(memory(projects)),
-    task.from(memory(tasks)),
-    secret.from(memory([{ id: 1, value: "hidden" }])),
-  ],
+  models: source
+    ? await sources[source]()
+    : [category.from(memory(categories)), project.from(memory(projects)), task.from(memory(tasks)), secret.from(memory(secrets))],
 })
 
 export type Api = typeof api
