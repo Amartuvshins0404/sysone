@@ -1,0 +1,17 @@
+{
+  "name": "example-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "size": "node ../../bench/browser-size.ts src/main.tsx --forbid=zod,drizzle-orm,mongodb,pg,mysql2,@prisma/client"
+  },
+  "dependencies": {
+    "@sysonejs/react": "workspace:*",
+    "react": "^19.2.0",
+    "sysonejs": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0"
+  }
+}
