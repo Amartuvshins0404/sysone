@@ -127,7 +127,7 @@ sysone is faster than the hand-written route because it formats dates itself. `J
 ```sh
 pnpm install && pnpm build
 cd examples/express && docker compose up -d
-SOURCE=pg PG_URL=... pnpm dev        # memory | pg | mysql | drizzle-pg | drizzle-mysql | prisma | mongo
+SOURCE=pg PG_URL=postgres://postgres@localhost:54329/sysone pnpm dev        # memory | pg | mysql | drizzle-pg | drizzle-mysql | prisma | mongo
 node ../../spec/run.ts http://localhost:3000
 ```
 

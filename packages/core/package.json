@@ -38,5 +38,11 @@
   },
   "devDependencies": {
     "zod": "^4.6.7"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Amartuvshins0404/sysone.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Amartuvshins0404/sysone#readme"
 }
