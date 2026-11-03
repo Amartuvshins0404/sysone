@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "allowImportingTsExtensions": true },
+  "include": ["src/model.ts", "src/api.ts", "src/server.ts", "src/bun.ts"]
+}

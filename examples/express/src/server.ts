@@ -1,20 +1,12 @@
-import { sysone } from "@sysonejs/express"
 import express from "express"
-import { expose } from "sysonejs/server"
-import { source } from "./sources.ts"
+import { nodeHandler } from "sysonejs/node"
+import { api } from "./api.ts"
+import { ctxFrom } from "./model.ts"
 
-const SOURCE = process.env.SOURCE ?? "memory"
 const PORT = Number(process.env.PORT ?? 3000)
-
-const { model, source: from } = await source(SOURCE)
 
 const app = express()
 app.use(express.json())
-app.use(
-  "/api",
-  sysone([expose(model, { source: from, can: ({ action, ctx }) => action === "list" || action === "get" || ctx.admin })], {
-    context: (req) => ({ admin: req.get("x-admin") === "1" }),
-  }),
-)
+app.use(nodeHandler(api, { context: (req: express.Request) => ctxFrom((name) => req.get(name)) }))
 
-app.listen(PORT, () => console.log(`sysonejs example (${SOURCE}) on http://localhost:${PORT}/api/category`))
+app.listen(PORT, () => console.log(`sysonejs example (express + nodeHandler) on http://localhost:${PORT}/api/category`))

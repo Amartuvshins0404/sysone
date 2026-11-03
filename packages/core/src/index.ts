@@ -1,5 +1,6 @@
 export { defineModel } from "./model"
-export type { Grants, Model, Bound, RowOf, CtxOf, ContractOf } from "./model"
+export type { AnyModel, AnySchema, Bound, ContractOf, CtxOf, Grants, Match, Model, ModelOptions, Relation, RowOf, Rule } from "./model"
 export { sysone, fetchHandler } from "./app"
-export type { App, AnyApp, AppCtx, HandlerInput, HandlerOutput } from "./app"
+export type { AnyApp, App, AppCtx, ContractsFrom, CtxFrom, HandlerInput, HandlerOutput, SysoneConfig } from "./app"
+export type { Contracts, ContractsOf, FilterInput, HasContract, Item, ListParams, ModelContract, Page, Range, SortSpec } from "./contract"
 export { memory } from "./memory"

@@ -1,11 +1,11 @@
-import { expose, fetchHandler } from "sysonejs/server"
-import { source } from "./sources.ts"
+import { fetchHandler } from "sysonejs"
+import { api } from "./api.ts"
+import { ctxFrom } from "./model.ts"
 
-const { model, source: from } = await source(process.env.SOURCE ?? "memory")
+declare const Bun: { serve(options: { port: number; fetch: (request: Request) => Promise<Response> }): unknown }
+declare const process: { env: { [name: string]: string | undefined } }
 
-const handle = fetchHandler([expose(model, { source: from, can: ({ action, ctx }) => action === "list" || action === "get" || ctx.admin })], {
-  prefix: "/api",
-  context: (req) => ({ admin: req.headers.get("x-admin") === "1" }),
-})
+const port = Number(process.env.PORT ?? 3000)
 
-Bun.serve({ port: Number(process.env.PORT ?? 3000), fetch: handle })
+Bun.serve({ port, fetch: fetchHandler(api, { context: (req) => ctxFrom((name) => req.headers.get(name)) }) })
+console.log(`sysonejs example (Bun + fetchHandler) on http://localhost:${port}/api/category`)
