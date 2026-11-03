@@ -207,6 +207,16 @@ try {
     await db.category.update(leaving.id, { active: false })
     await sleep(400)
     check(!active.box.current.items.some((c) => c.id === leaving.id), "a slow older list response does not bring back a row a newer write moved out")
+
+    const racing = active.box.current.items[0]!
+    slow = (path) => (path === `/category/${racing.id}` ? 300 : 0)
+    const patching = db.category.update(racing.id, { active: false })
+    await sleep(100)
+    slow = undefined
+    await byName.box.current.refetch()
+    await patching
+    await settle()
+    check(!active.box.current.items.some((c) => c.id === racing.id), "a write still refetches the lists it affects when another list saw the new value first")
     byName.unmount()
     active.unmount()
   }
