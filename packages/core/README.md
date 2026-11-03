@@ -14,15 +14,29 @@ browser  createClient<Api>()    →  useSelect(db.category) → <Select />
 - **Safe by default:** a model with no `access` rule is closed. Rules scope rows per tenant or owner, and writes carry the scope in the same database statement.
 - **Any database:** Postgres, MySQL, MongoDB, Prisma, Drizzle. All pass one shared test suite.
 - **Any runtime:** Node and Bun. Express, plain `node:http`, or anything that speaks `fetch` (Bun.serve, Hono, Elysia).
-- **Open spec:** plain REST + JSON in [SPEC.md](./SPEC.md), with 91 JSON test cases any server in any language can run.
+- **Open spec:** plain REST + JSON in [SPEC.md](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md), with 91 JSON test cases any server in any language can run.
 
 > Status: v0.1, early. Install: `npm i sysonejs zod` on the server, `npm i sysonejs @sysonejs/react` in the app.
 
+## Documentation
+
+Start with [Getting started](https://github.com/Amartuvshins0404/sysone/blob/main/docs/getting-started.md), a five-minute tutorial. The [docs index](https://github.com/Amartuvshins0404/sysone/blob/main/docs/README.md) lists every page:
+
+| Server | Browser | Reference |
+|---|---|---|
+| [Models](https://github.com/Amartuvshins0404/sysone/blob/main/docs/models.md) | [Querying lists](https://github.com/Amartuvshins0404/sysone/blob/main/docs/querying.md) | [Limitations](https://github.com/Amartuvshins0404/sysone/blob/main/docs/limitations.md) |
+| [Access rules](https://github.com/Amartuvshins0404/sysone/blob/main/docs/access.md) | [Client](https://github.com/Amartuvshins0404/sysone/blob/main/docs/client.md) | [Wire spec](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md) |
+| [Servers](https://github.com/Amartuvshins0404/sysone/blob/main/docs/servers.md) | [React hooks](https://github.com/Amartuvshins0404/sysone/blob/main/docs/react.md) | [Changelog](https://github.com/Amartuvshins0404/sysone/blob/main/CHANGELOG.md) |
+| [Sources](https://github.com/Amartuvshins0404/sysone/blob/main/docs/sources.md), [Writing a source](https://github.com/Amartuvshins0404/sysone/blob/main/docs/writing-a-source.md) | | [Contributing](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md) |
+
 ## 1. Define (server)
 
+<!-- file: model.ts -->
 ```ts
 import { defineModel } from "sysonejs"
 import { z } from "zod"
+
+export type Ctx = { admin: boolean } | null
 
 export const category = defineModel({
   name: "category",
@@ -47,38 +61,55 @@ export const category = defineModel({
 
 ## 2. Serve
 
+<!-- file: server.ts -->
 ```ts
-import { sysone } from "sysonejs"
+import express from "express"
+import { memory, sysone } from "sysonejs"
 import { nodeHandler } from "sysonejs/node"
-import { drizzle } from "@sysonejs/drizzle"
+import { category } from "./model.ts"
 
-export const api = sysone({ basePath: "/api", models: [category.from(drizzle(db, categories))] })
+export const api = sysone({ basePath: "/api", models: [category.from(memory())] })
 export type Api = typeof api
 
+const app = express()
 app.use(express.json())
-app.use(nodeHandler(api, { context: (req) => req.user ?? null }))
+app.use(nodeHandler(api, { context: () => null }))
+app.listen(3000)
 ```
+
+`context` turns each request into the `ctx` that access rules see. Read your session there. Swap `memory()` for `drizzle(db, table)`, `prisma(db.category)`, `pg(pool, "categories")`, or `mongo(collection)` to use a database.
 
 Bun, Hono, Elysia: `fetchHandler(api, { context })` from `sysonejs`.
 
-With Drizzle and Prisma, `.from(source)` checks at compile time that the table has a column for every model field. Columns outside the schema are never selected or sent.
+With Drizzle, Prisma, and MongoDB, `.from(source)` checks at compile time that the table has a column for every model field. Columns outside the schema are never selected or sent.
 
 ## 3. Use (browser)
 
+<!-- file: picker.tsx -->
 ```tsx
-import { createClient } from "sysonejs/client"
 import { useSelect } from "@sysonejs/react"
-import type { Api } from "../server/api"
+import { createClient } from "sysonejs/client"
+import type { Api } from "./server.ts"
 
 const db = createClient<Api>({ url: "/api" })
 
-function CategoryPicker({ value, onChange }) {
+export function CategoryPicker(props: { value: number | null; onChange: (id: number) => void }) {
   const s = useSelect(db.category, {
-    value,
+    value: props.value,
     include: ["parent"],
     label: (c) => (c.parent ? `${c.parent.name} / ${c.name}` : c.name),
   })
-  return <Combobox options={s.options} value={s.selected} inputValue={s.search} onInputChange={s.onSearch} onScrollEnd={s.loadMore} />
+  return (
+    <div>
+      <input value={s.search} onChange={(e) => s.onSearch(e.target.value)} placeholder={s.selected?.label} />
+      {s.options.map((o) => (
+        <button key={o.value} onClick={() => props.onChange(o.item.id)}>
+          {o.label}
+        </button>
+      ))}
+      {s.hasMore && <button onClick={s.loadMore}>More</button>}
+    </div>
+  )
 }
 ```
 
@@ -99,7 +130,7 @@ function CategoryPicker({ value, onChange }) {
 | `@sysonejs/mongo` | MongoDB driver |
 | `memory()` from `sysonejs` | prototypes, tests |
 
-The core turns paging, filters, search and access rules into one small condition tree. A source only translates that tree, so a new one is about 60–120 lines. `testSource` from `sysonejs/source` checks it.
+The core turns paging, filters, search and access rules into one small condition tree. A source only translates that tree, so a new one is about 60–120 lines. `testSource` from `sysonejs/source` checks it. See [Writing a source](https://github.com/Amartuvshins0404/sysone/blob/main/docs/writing-a-source.md).
 
 ## Numbers
 
@@ -124,12 +155,7 @@ sysone is faster than the hand-written route because it formats dates itself. `J
 
 ## Develop
 
-```sh
-pnpm install && pnpm build
-cd examples/express && docker compose up -d
-SOURCE=pg PG_URL=postgres://postgres@localhost:54329/sysone pnpm dev        # memory | pg | mysql | drizzle-pg | drizzle-mysql | prisma | mongo
-node ../../spec/run.ts http://localhost:3000
-```
+See [CONTRIBUTING.md](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md) for setup, the local databases, and the checks CI runs.
 
 ## License
 
