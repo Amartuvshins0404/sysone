@@ -77,4 +77,5 @@ boxplot(() => {
   })
 })
 
-await run()
+const { benchmarks } = await run()
+for (const b of benchmarks) for (const r of b.runs) if (r.stats) console.log(`p50 ${(r.stats.p50 / 1000).toFixed(2).padStart(6)} µs  ${r.name}`)
