@@ -1,7 +1,7 @@
 import type { z } from "zod"
 import { compareValues, matches } from "./memory"
 import type { AnyModel } from "./model"
-import { all, toWire, type Binding, type Cond, type FieldKind, type FieldSpec, type FindPlan, type Row, type SortKey, type Source, type Store, type Value } from "./source"
+import { all, isoDate, toWire, type Binding, type Cond, type FieldKind, type FieldSpec, type FindPlan, type Row, type SortKey, type Source, type Store, type Value } from "./source"
 import type { ErrorCode, WireIssue, WireMeta, WireModelMeta } from "./wire"
 
 export class SysoneError extends Error {
@@ -36,6 +36,7 @@ export interface Compiled {
   readonly fields: ReadonlyMap<string, FieldSpec>
   readonly shape: { readonly [field: string]: z.ZodType }
   readonly select: readonly string[]
+  readonly convert: readonly FieldSpec[]
   readonly search: readonly string[]
   readonly filter: ReadonlyMap<string, ReadonlySet<FilterOp>>
   readonly sort: ReadonlySet<string>
@@ -79,6 +80,7 @@ function fieldSpec(name: string, t: z.ZodType): FieldSpec {
 }
 
 const DENY = () => null
+const CONVERT = new Set<FieldKind>(["date", "bigint", "boolean"])
 const ordered = (s: FieldSpec) => !s.nullable && s.kind !== "boolean" && s.kind !== "json"
 
 export function compile(model: AnyModel, source: Source<unknown>): Compiled {
@@ -135,6 +137,7 @@ export function compile(model: AnyModel, source: Source<unknown>): Compiled {
     fields,
     shape,
     select: [...fields.keys()],
+    convert: [...fields.values()].filter((s) => CONVERT.has(s.kind)),
     search,
     filter,
     sort,
@@ -309,13 +312,13 @@ export function planList(c: Compiled, req: ListRequest, scope: Scope): FindPlan 
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
-const jsonScalar = (v: unknown) => (v instanceof Date ? v.toISOString() : typeof v === "bigint" ? String(v) : v)
+const jsonScalar = (v: unknown) => (v instanceof Date ? isoDate(v) : typeof v === "bigint" ? String(v) : v)
 
 export function nextCursor(req: ListRequest, rows: readonly Row[]): string | null {
   if (rows.length <= req.limit) return null
   const last = rows[req.limit - 1]!
   const json = JSON.stringify([1, req.sortSpec, ...req.sort.map((k) => jsonScalar(last[k.field]))])
-  return btoa(String.fromCharCode(...encoder.encode(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+  return btoa(/^[\x00-\x7f]*$/.test(json) ? json : String.fromCharCode(...encoder.encode(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
 export function decodeCursor(c: Compiled, sort: Order, raw: string): readonly Value[] {
@@ -437,10 +440,10 @@ export function planIncludes(
 }
 
 export function encodeRow(c: Compiled, row: Row): Row {
-  const out: Row = {}
-  for (const f of c.binding.fields) {
-    const v = row[f.name]
-    if (v !== undefined) out[f.name] = toWire(f.kind, v)
-  }
+  const out = { ...row }
+  let n = 0
+  for (const f of c.select) if (f in out) n++
+  if (n !== Object.keys(out).length) for (const k of Object.keys(out)) if (!c.fields.has(k)) delete out[k]
+  for (const f of c.convert) if (out[f.name] != null) out[f.name] = toWire(f.kind, out[f.name])
   return out
 }

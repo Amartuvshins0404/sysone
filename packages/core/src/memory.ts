@@ -1,38 +1,39 @@
 import type { Binding, Cond, FindPlan, Row, SortKey, Source, Store } from "./source"
 
 export function memory<R extends Row = Row>(rows: R[] = []): Source<R> {
-  return { name: "memory", bind: (binding) => memoryStore(binding, rows.map((r) => ({ ...r }))) }
+  return { name: "memory", bind: (binding) => memoryStore(binding, rows) }
 }
 
-function memoryStore(binding: Binding, rows: Row[]): Store {
+function project(select: readonly string[], r: Row): Row {
+  const out: Row = {}
+  for (const f of select) if (r[f] !== undefined) out[f] = r[f]
+  return out
+}
+
+function memoryStore(binding: Binding, seed: readonly Row[]): Store {
   const id = binding.id
   const kind = binding.fields.find((f) => f.name === id)?.kind
+  const all = binding.fields.map((f) => f.name)
+  const rows = seed.map((r) => project(all, r))
   let seq = 0
   for (const r of rows) if (typeof r[id] === "number" && (r[id] as number) > seq) seq = r[id] as number
-  const project = (select: readonly string[], r: Row) => {
-    const out: Row = {}
-    for (const f of select) if (r[f] !== undefined) out[f] = r[f]
-    return out
-  }
-  const all = binding.fields.map((f) => f.name)
-  const at = (where: Cond) => rows.findIndex((r) => matches(where, r))
+  const at = (where: Cond) => rows.findIndex(predicate(where))
   return {
     async find(plan: FindPlan) {
-      const where = plan.where
-      const out = where ? rows.filter((r) => matches(where, r)) : rows.slice()
+      const out = plan.where ? rows.filter(predicate(plan.where)) : rows.slice()
       out.sort((a, b) => compareRows(plan.sort, a, b))
       if (out.length > plan.take) out.length = plan.take
-      return out.map((r) => project(plan.select, r))
+      return plan.select.length === all.length ? out.map((r) => ({ ...r })) : out.map((r) => project(plan.select, r))
     },
     async insert(row) {
-      const r = { ...row }
+      const r = project(all, row)
       if (r[id] === undefined) r[id] = kind === "string" ? crypto.randomUUID() : kind === "bigint" ? BigInt(++seq) : ++seq
       rows.push(r)
-      return project(all, r)
+      return { ...r }
     },
     async update(where, patch) {
       const r = rows[at(where)]
-      return r ? project(all, Object.assign(r, patch)) : null
+      return r ? { ...Object.assign(r, project(all, patch)) } : null
     },
     async remove(where) {
       const i = at(where)
@@ -43,33 +44,46 @@ function memoryStore(binding: Binding, rows: Row[]): Store {
   }
 }
 
-export function matches(cond: Cond, row: Row): boolean {
+type Test = (row: Row) => boolean
+
+export function predicate(cond: Cond): Test {
   switch (cond.op) {
     case "and":
-      return cond.of.every((c) => matches(c, row))
-    case "or":
-      return cond.of.some((c) => matches(c, row))
+    case "or": {
+      const tests = cond.of.map(predicate)
+      const and = cond.op === "and"
+      return (r) => {
+        for (const t of tests) if (t(r) !== and) return !and
+        return and
+      }
+    }
     case "null":
-      return row[cond.field] == null
+      return (r) => r[cond.field] == null
     case "in":
-      return row[cond.field] != null && cond.values.some((v) => compareValues(row[cond.field], v) === 0)
+      return (r) => r[cond.field] != null && cond.values.some((v) => compareValues(r[cond.field], v) === 0)
     case "contains": {
       const term = cond.term.toLowerCase()
-      return cond.fields.some((f) => typeof row[f] === "string" && (row[f] as string).toLowerCase().includes(term))
+      return (r) => cond.fields.some((f) => typeof r[f] === "string" && (r[f] as string).toLowerCase().includes(term))
     }
     case "after":
-      for (const k of cond.keys) {
-        const c = compareValues(row[k.field], k.value)
-        if (c !== 0) return k.dir === "asc" ? c > 0 : c < 0
+      return (r) => {
+        for (const k of cond.keys) {
+          const c = compareValues(r[k.field], k.value)
+          if (c !== 0) return k.dir === "asc" ? c > 0 : c < 0
+        }
+        return false
       }
-      return false
     default: {
-      const v = row[cond.field]
-      if (v == null) return false
-      const c = compareValues(v, cond.value)
-      return cond.op === "eq" ? c === 0 : cond.op === "gt" ? c > 0 : cond.op === "gte" ? c >= 0 : cond.op === "lt" ? c < 0 : c <= 0
+      const { field, value, op } = cond
+      if (op === "eq" && !(value instanceof Date)) return (r) => r[field] === value
+      const ok = op === "eq" ? (c: number) => c === 0 : op === "gt" ? (c: number) => c > 0 : op === "gte" ? (c: number) => c >= 0 : op === "lt" ? (c: number) => c < 0 : (c: number) => c <= 0
+      return (r) => r[field] != null && ok(compareValues(r[field], value))
     }
   }
+}
+
+export function matches(cond: Cond, row: Row): boolean {
+  return predicate(cond)(row)
 }
 
 export function compareRows(sort: readonly SortKey[], a: Row, b: Row): number {

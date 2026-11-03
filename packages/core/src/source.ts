@@ -75,9 +75,18 @@ export function escapeLike(term: string): string {
   return term.replace(/[\\%_]/g, "\\$&")
 }
 
+const p2 = (n: number) => (n < 10 ? "0" : "") + n
+
+export function isoDate(d: Date): string {
+  const y = d.getUTCFullYear()
+  if (!(y >= 1000 && y <= 9999)) return d.toISOString()
+  const ms = d.getUTCMilliseconds()
+  return `${y}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}T${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}.${ms < 10 ? "00" : ms < 100 ? "0" : ""}${ms}Z`
+}
+
 export function toWire(kind: FieldKind, v: unknown): unknown {
   if (v === null) return v
-  if (kind === "date") return v instanceof Date ? v.toISOString() : v
+  if (kind === "date") return v instanceof Date ? isoDate(v) : v
   if (kind === "bigint") return String(v)
   if (kind === "boolean") return typeof v === "number" ? v !== 0 : v
   return v
