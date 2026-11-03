@@ -1,0 +1,13 @@
+{
+  "name": "@sysonejs/express",
+  "version": "0.0.1",
+  "description": "Express middleware for sysonejs models.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": { ".": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown", "typecheck": "tsc -p ." },
+  "peerDependencies": { "sysonejs": "workspace:^", "express": ">=4" },
+  "devDependencies": { "sysonejs": "workspace:*", "express": "^5.2.1", "@types/express": "^5.0.6", "@types/node": "^26.0.0", "zod": "^4.6.7" }
+}

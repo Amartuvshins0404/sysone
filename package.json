@@ -1,0 +1,25 @@
+{
+  "name": "sysonejs-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.1",
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" build",
+    "typecheck": "pnpm -r --filter \"./packages/*\" typecheck",
+    "size": "size-limit",
+    "bench": "node bench/server.bench.ts",
+    "bench:http": "node bench/http.bench.ts"
+  },
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^14.3.0",
+    "@types/autocannon": "^7.12.7",
+    "@types/express": "^5.0.6",
+    "autocannon": "^8.0.0",
+    "express": "^5.3.0",
+    "mitata": "^1.0.34",
+    "size-limit": "^14.3.0",
+    "tsdown": "^0.23.4",
+    "typescript": "^5.9.3",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,12 @@
+services:
+  pg:
+    image: postgres:17-alpine
+    environment: { POSTGRES_PASSWORD: dev, POSTGRES_DB: sysone }
+    ports: ["54329:5432"]
+  mysql:
+    image: mysql:8.4
+    environment: { MYSQL_ROOT_PASSWORD: dev, MYSQL_DATABASE: sysone }
+    ports: ["33069:3306"]
+  mongo:
+    image: mongo:8
+    ports: ["27029:27017"]

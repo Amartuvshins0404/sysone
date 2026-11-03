@@ -1,0 +1,13 @@
+{
+  "name": "@sysonejs/mongo",
+  "version": "0.0.1",
+  "description": "MongoDB source for sysonejs.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": { ".": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown", "typecheck": "tsc -p ." },
+  "peerDependencies": { "sysonejs": "workspace:^", "mongodb": ">=6" },
+  "devDependencies": { "sysonejs": "workspace:*", "mongodb": "^7.0.0", "zod": "^4.6.7" }
+}

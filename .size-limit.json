@@ -1,0 +1,6 @@
+[
+  { "name": "sysonejs: defineModel", "path": "packages/core/dist/index.mjs", "import": "{ defineModel }", "ignore": ["zod"], "limit": "400 B" },
+  { "name": "sysonejs/client", "path": "packages/core/dist/client.mjs", "import": "{ createClient }", "limit": "1.3 KB" },
+  { "name": "@sysonejs/react: all hooks + client", "path": "packages/react/dist/index.mjs", "import": "*", "ignore": ["react"], "limit": "2 KB" },
+  { "name": "sysonejs/server (server only)", "path": "packages/core/dist/server.mjs", "import": "{ createHandler, expose }", "ignore": ["zod"], "limit": "2 KB" }
+]

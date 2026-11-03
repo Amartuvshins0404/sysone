@@ -1,0 +1,31 @@
+{
+  "name": "@sysonejs/react",
+  "version": "0.0.1",
+  "description": "React hooks for sysonejs models.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p ."
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "sysonejs": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
+    "sysonejs": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

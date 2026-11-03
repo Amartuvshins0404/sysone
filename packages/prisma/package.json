@@ -1,0 +1,13 @@
+{
+  "name": "@sysonejs/prisma",
+  "version": "0.0.1",
+  "description": "Prisma source for sysonejs (Postgres, MySQL, MongoDB).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": { ".": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown", "typecheck": "tsc -p ." },
+  "peerDependencies": { "sysonejs": "workspace:^" },
+  "devDependencies": { "sysonejs": "workspace:*", "zod": "^4.6.7" }
+}
