@@ -6,7 +6,7 @@ type Plain<T> = T extends ObjectId ? string : T
 export type MongoRow<D> = { [K in keyof D as K extends "_id" ? never : K]: Plain<D[K]> } & { id: string }
 
 export interface MongoOptions<D> {
-  readonly objectIds?: readonly (keyof D & string)[]
+  readonly objectIds?: readonly (keyof MongoRow<D> & string)[]
 }
 
 const NUMERIC_ID: Document = { _id: { $type: "number" } }
@@ -21,7 +21,7 @@ function mongoStore(collection: Collection<Document>, binding: Binding, objectId
   const id = binding.id
   const idKind = binding.fields.find((f) => f.name === id)!.kind
   const counted = idKind === "number" || idKind === "bigint"
-  const oids = new Set(objectIds)
+  const oids = new Set(objectIds.map((f) => (f === "_id" ? id : f)))
   const every = binding.fields.map((f) => f.name)
   const useBigInt64 = binding.fields.some((f) => f.kind === "bigint")
   const key = (field: string) => (field === id ? "_id" : field)

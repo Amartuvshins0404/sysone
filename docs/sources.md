@@ -325,7 +325,7 @@ const member = defineModel({
 
 const members = new MongoClient(process.env.DATABASE_URL!).db().collection<MemberDoc>("members")
 
-export const api = sysone({ basePath: "/api", models: [member.from(mongo(members, { objectIds: ["id", "teamId"] as never }))] })
+export const api = sysone({ basePath: "/api", models: [member.from(mongo(members, { objectIds: ["id", "teamId"] }))] })
 ```
 
 Without `teamId` in `objectIds`, a filter on `teamId` compares a string with an `ObjectId` and matches nothing.

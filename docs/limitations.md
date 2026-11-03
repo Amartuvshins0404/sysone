@@ -20,7 +20,7 @@ sysone 0.1.0 is an early release. This page lists what it does not do yet, so yo
 - Rules compare fields for equality, any-of, and empty. There are no ranges, no "not equal", and no rules that look at another model.
 - `access` is synchronous. Do lookups in the server's async `context` function.
 - There are no field-level rules. Anyone who may read a row gets every model field. Use a second model with a smaller schema to hide fields.
-- A create rule takes one value per field. See the known issues below.
+- A create rule takes one value per field. A list of values is a compile error.
 
 ## Writes
 
@@ -41,13 +41,3 @@ sysone 0.1.0 is an early release. This page lists what it does not do yet, so yo
 - The Prisma source's MySQL option is untested.
 - There is no OpenAPI output.
 
-## Known issues in 0.1.0
-
-These behaviors differ from what the types suggest:
-
-| Issue | Workaround |
-|---|---|
-| A create rule with a list of values, such as `create: { tenantId: ["a", "b"] }`, compiles, but each create request then throws `create rule of model "x" must stamp one value`. | Give the create rule one value per field. |
-| A relation whose key is not nullable is typed as always present, but it is `null` on the client when the caller may not read the related row. | Treat included relations as possibly `null`. |
-| `cursor` is accepted by `useList` and `watchList`, but ignored. Lists always start at the first page. | Use `loadMore()`. |
-| The MongoDB source's `objectIds` option is typed with document keys such as `_id`, but compares model field names such as `id`. Passing `_id` stops the id from being converted. | Pass model field names with a cast. See [ObjectId fields](./sources.md#objectid-fields). |

@@ -104,6 +104,13 @@ defineModel({
   write: ["nope"],
 })
 
+defineModel({
+  name: "bad",
+  schema: z.object({ id: z.number(), name: z.string() }),
+  // @ts-expect-error a create rule stamps one value per field
+  access: () => ({ create: { name: ["a", "b"] } }),
+})
+
 // @ts-expect-error category has no relation named nope
 export type UnknownInclude = ListParams<Cs["category"], readonly ["nope"]>
 
