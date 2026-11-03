@@ -68,7 +68,7 @@ export function createClient<A extends HasContract>(options: ClientOptions): Cli
     const send = options.fetch ?? fetch
     const url = `${options.url}/${m}${id === undefined ? "" : "/" + encodeURIComponent(text(id))}${query ? "?" + query : ""}`
     const headers = { "content-type": "application/json", ...(await options.headers?.()) }
-    const res = await send(url, { method, headers, body: body && JSON.stringify(body) })
+    const res = await send(url, { method, headers, body: body && JSON.stringify(body, (_, v) => (typeof v === "bigint" ? `${v}` : v)) })
     if (res.status === 204 || (res.status === 404 && !body && id !== undefined)) return null
     const json = await res.json().catch(() => ({}))
     if (res.ok) return json

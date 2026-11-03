@@ -47,6 +47,7 @@ export interface Compiled {
   readonly relations: ReadonlyMap<string, { readonly target: string; readonly key: string }>
   readonly createSchema: z.ZodType
   readonly patchSchema: z.ZodType
+  readonly typedWrites: readonly FieldSpec[]
   readonly meta: WireModelMeta
   readonly wireMeta: WireMeta
   readonly access: (ctx: unknown) => RawGrants | null | undefined
@@ -148,6 +149,7 @@ export function compile(model: AnyModel, source: Source<unknown>): Compiled {
     relations,
     createSchema,
     patchSchema,
+    typedWrites: write.map((f) => fields.get(f)!).filter((s) => s.kind === "date" || s.kind === "bigint"),
     meta,
     wireMeta: { [name]: meta },
     access: o.access ?? DENY,
@@ -354,6 +356,18 @@ export function planGet(c: Compiled, id: Value, scope: Scope): FindPlan {
   return { where: byId(c, id, scope), sort: c.idSort, take: 1, select: c.select }
 }
 
+function decodeBody(c: Compiled, body: unknown): unknown {
+  if (!c.typedWrites.length || typeof body !== "object" || body === null) return body
+  const out: Row = { ...(body as Row) }
+  for (const s of c.typedWrites) {
+    const v = out[s.name]
+    if (typeof v !== "string") continue
+    if (s.kind === "date") out[s.name] = new Date(v)
+    else if (/^-?\d+$/.test(v)) out[s.name] = BigInt(v)
+  }
+  return out
+}
+
 function invalidBody(error: z.ZodError): SysoneError {
   return new SysoneError(
     422,
@@ -364,7 +378,7 @@ function invalidBody(error: z.ZodError): SysoneError {
 }
 
 export function prepareCreate(c: Compiled, stamp: Extract<Stamp, { kind: "stamp" }>, body: unknown): Row {
-  const r = c.createSchema.safeParse(body)
+  const r = c.createSchema.safeParse(decodeBody(c, body))
   if (!r.success) throw invalidBody(r.error)
   const data = r.data as Row
   for (const [f, v] of Object.entries(stamp.values)) {
@@ -392,7 +406,7 @@ function residual(cond: Cond, patch: Row): Cond | boolean {
 }
 
 export function prepareUpdate(c: Compiled, scope: Extract<Scope, { kind: "all" | "where" }>, id: Value, body: unknown): { where: Cond; patch: Row } {
-  const r = c.patchSchema.safeParse(body)
+  const r = c.patchSchema.safeParse(decodeBody(c, body))
   if (!r.success) throw invalidBody(r.error)
   const patch = r.data as Row
   const where = byId(c, id, scope)

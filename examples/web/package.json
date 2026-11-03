@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "size": "node ../../bench/browser-size.ts src/main.tsx --forbid=zod,drizzle-orm,mongodb,pg,mysql2,@prisma/client --max-kb=2.6",
+    "size": "node ../../bench/browser-size.ts src/main.tsx --forbid=zod,drizzle-orm,mongodb,pg,mysql2,@prisma/client --max-kb=2.75",
     "typecheck": "tsc -p ."
   },
   "dependencies": {

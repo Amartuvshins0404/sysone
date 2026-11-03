@@ -81,6 +81,95 @@
         ],
         "next": "$string"
       }
+    },
+    {
+      "name": "writable bigint and date fields are revived from JSON strings on create",
+      "request": {
+        "method": "POST",
+        "path": "/api/category",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "name": "Typed",
+          "size": "9007199254740993123",
+          "createdAt": "2026-02-01T00:00:00.000Z",
+          "parentId": null,
+          "active": true
+        }
+      },
+      "status": 201,
+      "body": {
+        "item": {
+          "name": "Typed",
+          "size": "9007199254740993123",
+          "createdAt": "2026-02-01T00:00:00.000Z"
+        }
+      },
+      "save": {
+        "typed": "item.id"
+      }
+    },
+    {
+      "name": "writable bigint and date fields are revived from JSON strings on update",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/category/{{typed}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "size": "-5",
+          "createdAt": "2026-03-01T00:00:00.000Z"
+        }
+      },
+      "status": 200,
+      "body": {
+        "item": {
+          "name": "Typed",
+          "size": "-5",
+          "createdAt": "2026-03-01T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "a bigint field rejects a non-integer string",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/category/{{typed}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        },
+        "body": {
+          "size": "1.5"
+        }
+      },
+      "status": 422,
+      "body": {
+        "error": {
+          "code": "invalid_body",
+          "message": "$string"
+        }
+      }
+    },
+    {
+      "name": "clean up the typed row",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/category/{{typed}}",
+        "headers": {
+          "x-tenant": "t1",
+          "x-user": "u9",
+          "x-role": "admin"
+        }
+      },
+      "status": 204
     }
   ]
 }
