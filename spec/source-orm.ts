@@ -7,6 +7,7 @@ const sources: { readonly [name: string]: () => Promise<Open> } = {
   "drizzle-pg": async () => (await import("../examples/express/src/sources/drizzle.ts")).pgItem,
   "drizzle-mysql": async () => (await import("../examples/express/src/sources/drizzle.ts")).mysqlItem,
   prisma: async () => (await import("../examples/express/src/sources/prisma.ts")).item,
+  mongo: async () => (await import("../examples/express/src/sources/mongo.ts")).item,
 }
 
 const names = process.argv.slice(2)
