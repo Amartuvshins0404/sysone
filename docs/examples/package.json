@@ -1,0 +1,36 @@
+{
+  "name": "docs-examples",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.ts"
+  },
+  "devDependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "@sysonejs/drizzle": "workspace:*",
+    "@sysonejs/mongo": "workspace:*",
+    "@sysonejs/prisma": "workspace:*",
+    "@sysonejs/react": "workspace:*",
+    "@sysonejs/sql": "workspace:*",
+    "@types/bun": "^1.4.4",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.15.0",
+    "@types/react": "^19.2.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.30",
+    "express": "^5.2.1",
+    "hono": "^4.13.16",
+    "mongodb": "^7.0.0",
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1",
+    "prisma": "^7.10.1",
+    "react": "^19.2.0",
+    "sysonejs": "workspace:*",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "zod": "^4.6.7"
+  }
+}
