@@ -1,6 +1,6 @@
 {
   "name": "sysonejs",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Define a data model once. Get endpoints on the server and hooks on the client.",
   "license": "MIT",
   "type": "module",
@@ -44,5 +44,29 @@
     "url": "git+https://github.com/Amartuvshins0404/sysone.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/Amartuvshins0404/sysone#readme"
+  "homepage": "https://github.com/Amartuvshins0404/sysone#readme",
+  "keywords": [
+    "crud",
+    "rest",
+    "api",
+    "zod",
+    "react",
+    "hooks",
+    "express",
+    "bun",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "prisma",
+    "drizzle",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  }
 }

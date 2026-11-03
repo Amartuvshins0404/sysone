@@ -1,6 +1,6 @@
 {
   "name": "@sysonejs/mongo",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "MongoDB source for sysonejs.",
   "license": "MIT",
   "type": "module",
@@ -32,5 +32,24 @@
     "url": "git+https://github.com/Amartuvshins0404/sysone.git",
     "directory": "packages/mongo"
   },
-  "homepage": "https://github.com/Amartuvshins0404/sysone#readme"
+  "homepage": "https://github.com/Amartuvshins0404/sysone#readme",
+  "keywords": [
+    "crud",
+    "rest",
+    "api",
+    "zod",
+    "react",
+    "hooks",
+    "express",
+    "bun",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "prisma",
+    "drizzle",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

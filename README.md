@@ -16,7 +16,7 @@ browser  createClient<Api>()    →  useSelect(db.category) → <Select />
 - **Any runtime:** Node and Bun. Express, plain `node:http`, or anything that speaks `fetch` (Bun.serve, Hono, Elysia).
 - **Open spec:** plain REST + JSON in [SPEC.md](./SPEC.md), with 91 JSON test cases any server in any language can run.
 
-> Status: v1, not published yet.
+> Status: v0.1, early. Install: `npm i sysonejs zod` on the server, `npm i sysonejs @sysonejs/react` in the app.
 
 ## 1. Define (server)
 

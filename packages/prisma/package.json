@@ -1,6 +1,6 @@
 {
   "name": "@sysonejs/prisma",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Prisma source for sysonejs (Postgres, MySQL).",
   "license": "MIT",
   "type": "module",
@@ -30,5 +30,24 @@
     "url": "git+https://github.com/Amartuvshins0404/sysone.git",
     "directory": "packages/prisma"
   },
-  "homepage": "https://github.com/Amartuvshins0404/sysone#readme"
+  "homepage": "https://github.com/Amartuvshins0404/sysone#readme",
+  "keywords": [
+    "crud",
+    "rest",
+    "api",
+    "zod",
+    "react",
+    "hooks",
+    "express",
+    "bun",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "prisma",
+    "drizzle",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

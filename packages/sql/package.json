@@ -1,6 +1,6 @@
 {
   "name": "@sysonejs/sql",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Raw SQL source for sysonejs: Postgres (pg) and MySQL (mysql2), no ORM.",
   "license": "MIT",
   "type": "module",
@@ -39,5 +39,24 @@
     "url": "git+https://github.com/Amartuvshins0404/sysone.git",
     "directory": "packages/sql"
   },
-  "homepage": "https://github.com/Amartuvshins0404/sysone#readme"
+  "homepage": "https://github.com/Amartuvshins0404/sysone#readme",
+  "keywords": [
+    "crud",
+    "rest",
+    "api",
+    "zod",
+    "react",
+    "hooks",
+    "express",
+    "bun",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "prisma",
+    "drizzle",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
