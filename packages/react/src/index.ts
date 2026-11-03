@@ -1,104 +1,83 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react"
-import type { Id, Infer, Model } from "sysonejs"
-import { createClient, type Client, type ListParams, type Query } from "sysonejs/client"
+import { useEffect, useState, useSyncExternalStore } from "react"
+import type { Contracts, GetSnapshot, Item, ListParams, ListSnapshot, Live, Ref, RelationName, SysoneClientError } from "sysonejs/client"
 
-const Ctx = createContext<Client | null>(null)
-let fallback: Client | undefined
-
-export function SysoneProvider(p: { client: Client; children?: ReactNode }) {
-  return createElement(Ctx.Provider, { value: p.client }, p.children)
+export interface HookOptions {
+  readonly debounce?: number
+  readonly enabled?: boolean
 }
 
-export function useClient(): Client {
-  return useContext(Ctx) ?? (fallback ??= createClient())
-}
+export type ListResult<T> = ListSnapshot<T>
 
-const idle = { data: undefined, error: undefined, loading: false }
-const none: never[] = []
-const noop = () => () => {}
-
-function useQuery<T>(q: Query<T> | null) {
-  return useSyncExternalStore(
-    q ? q.subscribe : noop,
-    () => (q ? q.state : idle),
-    () => (q ? q.state : idle),
-  )
-}
-
-function useDebounced<T>(v: T, ms: number): T {
-  const [d, setD] = useState(v)
-  useEffect(() => {
-    if (!ms) return setD(v)
-    const t = setTimeout(() => setD(v), ms)
-    return () => clearTimeout(t)
-  }, [v, ms])
-  return ms ? d : v
-}
-
-export interface ListOptions {
-  debounce?: number
-  enabled?: boolean
-}
-
-export function useList<M extends Model>(model: M, params: ListParams<M> = {}, opts: ListOptions = {}) {
-  const client = useClient()
-  const search = useDebounced(params.search, opts.debounce ?? 0)
-  const q = opts.enabled === false ? null : client.query.list(model, { ...params, search })
-  const s = useQuery(q)
-  return {
-    items: (s.data?.items ?? none) as Infer<M>[],
-    loading: s.loading,
-    error: s.error,
-    hasMore: !!s.data?.next,
-    loadMore: () => q?.more(),
-    refetch: () => q?.refetch(),
-  }
-}
-
-export function useGet<M extends Model>(model: M, id: Id<M> | null | undefined) {
-  const client = useClient()
-  const s = useQuery(id == null ? null : client.query.get(model, id))
-  return { data: s.data, loading: s.loading, error: s.error }
-}
+export type GetResult<T> = GetSnapshot<T>
 
 export interface Option<T> {
-  value: string
-  label: string
-  item: T
+  readonly value: string
+  readonly label: string
+  readonly item: T
 }
 
-export interface SelectOptions<M extends Model> extends ListOptions {
-  label: keyof Infer<M> | ((item: Infer<M>) => string)
-  value?: Id<M> | null
-  params?: Omit<ListParams<M>, "search">
+export interface SelectOptions<Cs extends Contracts, N extends keyof Cs & string, I extends readonly RelationName<Cs[N]>[]>
+  extends Omit<ListParams<Cs[N], I>, "search" | "cursor">,
+    HookOptions {
+  readonly label: (keyof Cs[N]["row"] & string) | ((item: Item<Cs, N, I>) => string)
+  readonly value?: Cs[N]["id"] | null
 }
 
-export function useSelect<M extends Model>(model: M, opts: SelectOptions<M>) {
-  const [search, setSearch] = useState("")
-  const list = useList(model, { ...opts.params, search }, { debounce: opts.debounce ?? 250, enabled: opts.enabled })
-  const id = model.id as keyof Infer<M>
-  const missing = opts.value != null && !list.items.some((i) => i[id] === opts.value)
-  const selected = useGet(model, missing ? opts.value : null).data
-  const label = opts.label
-  const { options, current } = useMemo(() => {
-    const toOption = (item: Infer<M>): Option<Infer<M>> => ({
-      value: String(item[id]),
-      label: typeof label === "function" ? label(item) : String(item[label]),
-      item,
-    })
-    const options = list.items.map(toOption)
-    const extra = selected ? toOption(selected) : undefined
-    if (extra && !search) options.unshift(extra)
-    return { options, current: options.find((o) => o.item[id] === opts.value) ?? extra }
-  }, [list.items, selected, label, search, opts.value])
-  return {
-    options,
-    selected: current,
-    search,
-    onSearch: setSearch,
-    loading: list.loading,
-    error: list.error,
-    hasMore: list.hasMore,
-    loadMore: list.loadMore,
-  }
+export interface SelectResult<T> {
+  readonly options: readonly Option<T>[]
+  readonly selected: Option<T> | undefined
+  readonly search: string
+  readonly onSearch: (search: string) => void
+  readonly loading: boolean
+  readonly error: SysoneClientError | Error | undefined
+  readonly hasMore: boolean
+  readonly loadMore: () => Promise<void>
+}
+
+type Rels<Cs extends Contracts, N extends keyof Cs & string> = readonly RelationName<Cs[N]>[]
+
+const done = async () => {}
+const SNAP = { items: [], ids: [], data: undefined, loading: false, error: undefined, hasMore: false, loadMore: done, refetch: done }
+const IDLE = { subscribe: () => done, getSnapshot: () => SNAP }
+
+const useLive = <S>(live: Live<S>) => useSyncExternalStore(live.subscribe, live.getSnapshot)
+
+function useDebounced<T>(value: T, ms: number | undefined): T {
+  const [settled, set] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(set, ms, value)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return ms ? settled : value
+}
+
+export function useList<Cs extends Contracts, N extends keyof Cs & string, const I extends Rels<Cs, N> = readonly []>(
+  ref: Ref<Cs, N>,
+  params: ListParams<Cs[N], I> = {},
+  options: HookOptions = {},
+): ListResult<Item<Cs, N, I>> {
+  const search = useDebounced(params.search, options.debounce)
+  return useLive(options.enabled === false ? IDLE : ref.watchList({ ...params, search }))
+}
+
+export function useGet<Cs extends Contracts, N extends keyof Cs & string, const I extends Rels<Cs, N> = readonly []>(
+  ref: Ref<Cs, N>,
+  id: Cs[N]["id"] | null | undefined,
+  options: { readonly include?: I; readonly enabled?: boolean } = {},
+): GetResult<Item<Cs, N, I>> {
+  return useLive(id == null || options.enabled === false ? IDLE : ref.watchGet(id, options))
+}
+
+export function useSelect<Cs extends Contracts, N extends keyof Cs & string, const I extends Rels<Cs, N> = readonly []>(
+  ref: Ref<Cs, N>,
+  { label, value, debounce = 250, enabled, ...params }: SelectOptions<Cs, N, I>,
+): SelectResult<Item<Cs, N, I>> {
+  const [search, onSearch] = useState("")
+  const list = useList(ref, { ...params, search } as ListParams<Cs[N], I>, { debounce, enabled })
+  const text = typeof label === "function" ? label : (item: Item<Cs, N, I>) => String(item[label])
+  const options = list.items.map((item, i) => ({ value: list.ids[i]!, label: text(item), item }))
+  const key = String(value)
+  const found = options.find((o) => o.value === key)
+  const off = useGet(ref, value, { include: params.include, enabled: enabled !== false && !list.loading && !found }).data
+  return { ...list, options, selected: found ?? (off ? { value: key, label: text(off), item: off } : undefined), search, onSearch }
 }
