@@ -1,9 +1,9 @@
 import autocannon from "autocannon"
 import express from "express"
 import { z } from "zod"
-import { defineModel } from "../packages/core/dist/index.mjs"
-import { expose, type Source } from "../packages/core/dist/server.mjs"
-import { sysone } from "../packages/express/dist/index.mjs"
+import { defineModel, sysone } from "../packages/core/dist/index.mjs"
+import type { Source, Store } from "../packages/core/dist/kit.mjs"
+import { nodeHandler } from "../packages/core/dist/node.mjs"
 
 const rows = Array.from({ length: 21 }, (_, i) => ({
   id: i + 1,
@@ -13,14 +13,13 @@ const rows = Array.from({ length: 21 }, (_, i) => ({
   createdAt: new Date(2026, 0, i + 1),
 }))
 
-const fixed: Source = {
-  exact: true,
-  list: async () => rows,
-  get: async () => rows[0]!,
-  create: async (d) => d,
-  update: async (_, d) => d,
-  delete: async () => true,
+const store: Store = {
+  find: async () => rows,
+  insert: async (r) => r,
+  update: async (_, r) => r,
+  remove: async () => true,
 }
+const fixed: Source<(typeof rows)[number]> = { name: "fixed", bind: () => store }
 
 const category = defineModel({
   name: "category",
@@ -28,18 +27,19 @@ const category = defineModel({
   search: ["name"],
   filter: ["parentId", "active"],
   sort: ["name", "createdAt"],
+  access: () => ({ read: true }),
 })
 
 const plain = express()
 plain.get("/api/category", async (req, res) => {
   const limit = Math.min(Number(req.query.limit ?? 20), 100)
-  const out = await fixed.list({ filter: {}, sort: { field: "id", dir: "asc" }, limit })
+  const out = await store.find({ where: null, sort: [{ field: "id", dir: "asc" }], take: limit + 1, select: [] })
   const items = out.slice(0, limit)
   res.json({ items, next: out.length > limit ? String(items.at(-1)!.id) : null })
 })
 
 const lib = express()
-lib.use("/api", sysone([expose(category, { source: () => fixed })]))
+lib.use(nodeHandler(sysone({ basePath: "/api", models: [category.from(fixed)] }), { context: () => null }))
 
 const listen = (app: express.Express, port: number) => new Promise<{ close(): void }>((r) => { const s = app.listen(port, () => r(s)) })
 const servers = [await listen(plain, 4101), await listen(lib, 4102)]
@@ -56,7 +56,7 @@ for (const [name, port, path] of [
   await hit(port, path)
   const r = await hit(port, path)
   results[name] = r.requests.average
-  console.log(`${name.padEnd(36)} ${Math.round(r.requests.average).toString().padStart(7)} req/s   p99 ${r.latency.p99} ms`)
+  console.log(`${name.padEnd(36)} ${Math.round(r.requests.average).toString().padStart(7)} req/s   p99 ${r.latency.p99} ms   non-2xx ${r.non2xx} errors ${r.errors}`)
 }
 const base = results["hand-written express route"]!
 for (const [k, v] of Object.entries(results))
