@@ -1,195 +1,91 @@
-import type { Id, Infer, Model, Page } from "./index"
+import { createCache, encodeQuery, text } from "./cache"
+import type { Contracts, ContractsOf, HasContract, Item, ListParams, ModelContract, RelationName } from "./contract"
+import type { ErrorCode, WireError, WireListParams } from "./wire"
 
-export interface ListParams<M extends Model = Model> {
-  search?: string
-  filter?: { [K in keyof Infer<M>]?: Infer<M>[K] | Infer<M>[K][] }
-  sort?: string
-  limit?: number
-  cursor?: string | null
-}
+export type { Contracts, Item, ListParams, ModelContract, RelationName }
 
 export interface ClientOptions {
-  url?: string
-  fetch?: typeof fetch
-  headers?: () => HeadersInit | Promise<HeadersInit>
-  credentials?: RequestCredentials
-}
-
-export interface State<T> {
-  data: T | undefined
-  error: unknown
-  loading: boolean
-}
-
-export interface Query<T> {
-  key: string
-  state: State<T>
-  subscribe(fn: () => void): () => void
-  refetch(): Promise<void>
-}
-
-export interface ListQuery<T> extends Query<Page<T>> {
-  more(): Promise<void>
+  readonly url: string
+  readonly fetch?: typeof fetch
+  readonly headers?: () => Record<string, string> | Promise<Record<string, string>>
 }
 
 export class SysoneClientError extends Error {
-  status: number
-  code: string
-  issues?: unknown
-  constructor(status: number, e?: { code?: string; message?: string; issues?: unknown }) {
-    super(e?.message ?? `Request failed with ${status}`)
-    this.status = status
-    this.code = e?.code ?? "http_error"
-    this.issues = e?.issues
+  declare readonly status: number
+  declare readonly code: ErrorCode | "http_error"
+  declare readonly issues: { readonly [path: string]: string }
+  constructor(status: number, code: SysoneClientError["code"], message: string, issues: SysoneClientError["issues"] = {}) {
+    super(message)
+    Object.assign(this, { status, code, issues })
   }
 }
 
-const enc = (v: unknown) => (v instanceof Date ? v.toISOString() : v === null ? "null" : String(v))
-
-export function toQuery(p: ListParams<any>): string {
-  const q = new URLSearchParams()
-  if (p.search) q.set("search", p.search)
-  if (p.sort) q.set("sort", p.sort)
-  if (p.limit) q.set("limit", String(p.limit))
-  if (p.cursor) q.set("cursor", p.cursor)
-  if (p.filter)
-    for (const k of Object.keys(p.filter).sort()) {
-      const v = p.filter[k]
-      if (v === undefined) continue
-      for (const x of Array.isArray(v) ? v : [v]) q.append(`filter[${k}]`, enc(x))
-    }
-  const s = q.toString()
-  return s ? "?" + s : ""
+export interface ListSnapshot<T> {
+  readonly items: readonly T[]
+  readonly ids: readonly string[]
+  readonly loading: boolean
+  readonly error: SysoneClientError | Error | undefined
+  readonly hasMore: boolean
+  readonly loadMore: () => Promise<void>
+  readonly refetch: () => Promise<void>
 }
 
-interface Entry {
-  q: Query<any>
-  model: string
-  subs: Set<() => void>
-  set(s: Partial<State<any>>): void
-  gc?: ReturnType<typeof setTimeout>
+export interface GetSnapshot<T> {
+  readonly data: T | null | undefined
+  readonly loading: boolean
+  readonly error: SysoneClientError | Error | undefined
+  readonly refetch: () => Promise<void>
 }
 
-export type Client = ReturnType<typeof createClient>
+export interface Live<S> {
+  getSnapshot(): S
+  subscribe(onChange: () => void): () => void
+}
 
-export function createClient(o: ClientOptions = {}) {
-  const base = (o.url ?? "/api").replace(/\/$/, "")
-  const entries = new Map<string, Entry>()
+export type LiveList<T> = Live<ListSnapshot<T>>
 
-  async function call(method: string, path: string, body?: unknown) {
-    const headers = new Headers(await o.headers?.())
-    if (body !== undefined) headers.set("content-type", "application/json")
-    const res = await (o.fetch ?? fetch)(base + path, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      credentials: o.credentials,
-    })
-    if (res.status === 204) return undefined
-    const json = await res.json().catch(() => null)
-    if (!res.ok) throw new SysoneClientError(res.status, json?.error)
-    return json
-  }
+export type LiveGet<T> = Live<GetSnapshot<T>>
 
-  function revive<T>(m: Model, row: any): T {
-    for (const k of m.dates) if (typeof row[k] === "string") row[k] = new Date(row[k])
-    return row
-  }
+type Includes<C extends ModelContract> = readonly RelationName<C>[]
 
-  const path = (m: Model, id?: unknown) => "/" + encodeURIComponent(m.name) + (id === undefined ? "" : "/" + encodeURIComponent(enc(id)))
+export interface Ref<Cs extends Contracts, N extends keyof Cs & string> {
+  create(data: Cs[N]["create"]): Promise<Cs[N]["row"]>
+  update(id: Cs[N]["id"], patch: Cs[N]["patch"]): Promise<Cs[N]["row"]>
+  delete(id: Cs[N]["id"]): Promise<void>
+  watchList<const I extends Includes<Cs[N]> = readonly []>(params?: ListParams<Cs[N], I>): LiveList<Item<Cs, N, I>>
+  watchGet<const I extends Includes<Cs[N]> = readonly []>(id: Cs[N]["id"], options?: { readonly include?: I }): LiveGet<Item<Cs, N, I>>
+}
 
-  const api = {
-    async list<M extends Model>(m: M, p: ListParams<M> = {}): Promise<Page<Infer<M>>> {
-      const page = await call("GET", path(m) + toQuery(p))
-      page.items.forEach((r: unknown) => revive(m, r))
-      return page
-    },
-    async get<M extends Model>(m: M, id: Id<M>): Promise<Infer<M>> {
-      return revive(m, await call("GET", path(m, id)))
-    },
-    async create<M extends Model>(m: M, data: Partial<Infer<M>>): Promise<Infer<M>> {
-      const r = revive<Infer<M>>(m, await call("POST", path(m), data))
-      invalidate(m)
-      return r
-    },
-    async update<M extends Model>(m: M, id: Id<M>, data: Partial<Infer<M>>): Promise<Infer<M>> {
-      const r = revive<Infer<M>>(m, await call("PATCH", path(m, id), data))
-      invalidate(m)
-      return r
-    },
-    async delete<M extends Model>(m: M, id: Id<M>): Promise<void> {
-      await call("DELETE", path(m, id))
-      invalidate(m)
-    },
-  }
+export type Client<A extends HasContract> = {
+  readonly [N in keyof ContractsOf<A> & string]: Ref<ContractsOf<A>, N>
+}
 
-  function entry(key: string, model: string, load: (prev: any, more: boolean) => Promise<any>): Entry {
-    let e = entries.get(key)
-    if (e) return e
-    let run: Promise<void> | undefined
-    let runMore = false
-    let seq = 0
-    const fetchNow = (more = false): Promise<void> => {
-      if (run && (more || !runMore)) return run
-      const n = ++seq
-      runMore = more
-      self.set({ loading: true, error: undefined })
-      const p = load(self.q.state.data, more).then(
-        (data) => {
-          if (n === seq) self.set({ loading: false, data })
-        },
-        (error) => {
-          if (n === seq) self.set({ loading: false, error })
-        },
-      )
-      run = p.finally(() => {
-        if (n === seq) run = undefined
-      })
-      return run
-    }
-    const self: Entry = {
-      model,
-      subs: new Set(),
-      q: {
-        key,
-        state: { data: undefined, error: undefined, loading: false },
-        subscribe(fn) {
-          clearTimeout(self.gc)
-          self.subs.add(fn)
-          if (self.subs.size === 1) fetchNow()
-          return () => {
-            self.subs.delete(fn)
-            if (!self.subs.size) self.gc = setTimeout(() => entries.delete(key), 60_000)
-          }
-        },
-        refetch: () => fetchNow(),
-      },
-      set(s) {
-        self.q.state = { ...self.q.state, ...s }
-        self.subs.forEach((f) => f())
-      },
-    }
-    ;(self.q as ListQuery<unknown>).more = () => fetchNow(true)
-    entries.set(key, (e = self))
-    return e
-  }
+export { encodeQuery }
 
-  function invalidate(m: Model) {
-    for (const e of entries.values()) if (e.model === m.name) e.subs.size ? e.q.refetch() : entries.delete(e.q.key)
-  }
-
-  function list<M extends Model>(m: M, p: ListParams<M> = {}): ListQuery<Infer<M>> {
-    return entry(`${m.name}${toQuery(p)}`, m.name, async (prev: Page<Infer<M>> | undefined, more) => {
-      if (!more) return api.list(m, p)
-      if (!prev?.next) return prev
-      const page = await api.list(m, { ...p, cursor: prev.next })
-      return { items: prev.items.concat(page.items), next: page.next }
-    }).q as ListQuery<Infer<M>>
-  }
-
-  function one<M extends Model>(m: M, id: Id<M>): Query<Infer<M>> {
-    return entry(`${m.name}/${enc(id)}`, m.name, () => api.get(m, id)).q
-  }
-
-  return { ...api, query: { list, get: one }, invalidate }
+export function createClient<A extends HasContract>(options: ClientOptions): Client<A> {
+  const cache = createCache(async (method, m, id, query, body) => {
+    const send = options.fetch ?? fetch
+    const url = `${options.url}/${m}${id === undefined ? "" : "/" + encodeURIComponent(text(id))}${query ? "?" + query : ""}`
+    const headers = { "content-type": "application/json", ...(await options.headers?.()) }
+    const res = await send(url, { method, headers, body: body && JSON.stringify(body) })
+    if (res.status === 204 || (res.status === 404 && !body && id !== undefined)) return null
+    const json = await res.json().catch(() => ({}))
+    if (res.ok) return json
+    const e: Partial<WireError["error"]> = json.error ?? {}
+    throw new SysoneClientError(
+      res.status,
+      e.code ?? "http_error",
+      e.message ?? res.statusText,
+      Object.fromEntries((e.issues ?? []).map((i) => [i.path.join("."), i.message])),
+    )
+  })
+  return new Proxy({} as Client<A>, {
+    get: (_, m: string) => ({
+      create: (data: object) => cache.write(m, "POST", undefined, data),
+      update: (id: unknown, patch: object) => cache.write(m, "PATCH", id, patch),
+      delete: (id: unknown) => cache.write(m, "DELETE", id),
+      watchList: (p: WireListParams = {}) => cache.query(m, p),
+      watchGet: (id: unknown, o?: { readonly include?: readonly string[] }) => cache.query(m, undefined, id, o?.include),
+    }),
+  })
 }

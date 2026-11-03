@@ -20,6 +20,10 @@
       "types": "./dist/kit.d.mts",
       "browser": "./dist/browser-guard.mjs",
       "default": "./dist/kit.mjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "default": "./dist/client.mjs"
     }
   },
   "files": [
