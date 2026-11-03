@@ -24,7 +24,7 @@ If you are new, read the first three pages in order. Then read the pages for wha
 
 ## Reference
 
-- [Limitations](./limitations.md): what 0.1.0 does not do yet, and its known issues.
+- [Limitations](./limitations.md): what sysone does not do yet.
 - [Wire spec](../SPEC.md): the HTTP format that every sysone server and client follows, with the JSON test cases.
 - [Contributing](../CONTRIBUTING.md): set up the repository and run the checks.
 

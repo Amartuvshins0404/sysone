@@ -17,7 +17,7 @@ export interface Option<T> {
 }
 
 export interface SelectOptions<Cs extends Contracts, N extends keyof Cs & string, I extends readonly RelationName<Cs[N]>[]>
-  extends Omit<ListParams<Cs[N], I>, "search" | "cursor">,
+  extends Omit<ListParams<Cs[N], I>, "search">,
     HookOptions {
   readonly label: (keyof Cs[N]["row"] & string) | ((item: Item<Cs, N, I>) => string)
   readonly value?: Cs[N]["id"] | null

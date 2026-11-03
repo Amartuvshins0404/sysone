@@ -1,6 +1,6 @@
 {
   "name": "sysonejs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Define a data model once. Get endpoints on the server and hooks on the client.",
   "license": "MIT",
   "type": "module",

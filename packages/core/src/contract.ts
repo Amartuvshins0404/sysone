@@ -17,7 +17,6 @@ export type FilterInput<T> =
 
 export interface RelationContract {
   readonly model: string
-  readonly nullable: boolean
 }
 
 export interface ModelContract {
@@ -41,12 +40,7 @@ export type ContractsOf<A> = A extends HasContract<infer Cs> ? Cs : never
 
 export type RelationName<C extends ModelContract> = Extract<keyof C["relations"], string>
 
-export type Related<Cs extends Contracts, R extends RelationContract> =
-  R["model"] extends keyof Cs
-    ? R["nullable"] extends true
-      ? Cs[R["model"]]["row"] | null
-      : Cs[R["model"]]["row"]
-    : never
+export type Related<Cs extends Contracts, R extends RelationContract> = R["model"] extends keyof Cs ? Cs[R["model"]]["row"] | null : never
 
 export type Item<Cs extends Contracts, N extends keyof Cs, I extends readonly string[]> = Cs[N]["row"] & {
   readonly [R in I[number] & keyof Cs[N]["relations"]]: Related<Cs, Cs[N]["relations"][R]>
@@ -58,7 +52,6 @@ export interface ListParams<C extends ModelContract, I extends readonly Relation
   readonly sort?: readonly SortSpec<C["sort"]>[]
   readonly include?: I
   readonly limit?: number
-  readonly cursor?: string | null
 }
 
 export interface Page<T> {

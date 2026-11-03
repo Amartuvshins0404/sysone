@@ -1,6 +1,6 @@
 {
   "name": "@sysonejs/sql",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Raw SQL source for sysonejs: Postgres (pg) and MySQL (mysql2), no ORM.",
   "license": "MIT",
   "type": "module",

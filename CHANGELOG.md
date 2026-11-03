@@ -1,9 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 (2026-11-03)
 
-- Add documentation in `docs/`, checked in CI by `pnpm --filter docs-examples check`.
-- Add `CONTRIBUTING.md`.
+Fixes:
+
+- `@sysonejs/mongo`: `objectIds` now takes model field names. Passing `_id` maps to the id field instead of breaking gets by id.
+- Included relations are typed as `row | null` for every relation. A row the caller may not read is `null` even when its key is not nullable.
+- A create rule with a list of values is now a compile error. Before, it compiled and then failed on every create request.
+- `cursor` is no longer accepted by `useList`, `useSelect` and `watchList`, where it was ignored. Use `loadMore()`.
+
+Other:
+
+- Documentation in `docs/`, with every code sample compiled in CI.
+- A rewritten README, `CONTRIBUTING.md`, and automatic npm publishing from CI with provenance.
 
 ## 0.1.0 (2026-11-03)
 

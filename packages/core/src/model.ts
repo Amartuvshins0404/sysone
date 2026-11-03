@@ -19,10 +19,11 @@ export type IdField<S extends AnySchema> = KeysWhere<Out<S>, string | number | b
 
 export type Match<Row> = { readonly [K in KeysWhere<Row, Scalar>]?: Row[K] | readonly Row[K][] }
 export type Rule<Row> = boolean | Match<Row> | readonly Match<Row>[]
+export type Stamp<Row> = { readonly [K in KeysWhere<Row, Scalar>]?: Row[K] }
 
 export interface Grants<Row> {
   readonly read?: Rule<Row>
-  readonly create?: boolean | Match<Row>
+  readonly create?: boolean | Stamp<Row>
   readonly update?: Rule<Row>
   readonly delete?: Rule<Row>
 }
@@ -94,8 +95,6 @@ export type ContractOf<M extends AnyModel> = {
   readonly sort: ListOf<OptionsOf<M>, "sort"> | IdOf<M>
   readonly search: [ListOf<OptionsOf<M>, "search">] extends [never] ? false : true
   readonly relations: {
-    readonly [R in keyof RelationsOf<M> & string]: RelationsOf<M>[R] extends Relation<infer K>
-      ? { readonly model: RelationsOf<M>[R]["model"]; readonly nullable: null extends RowOf<M>[K] ? true : false }
-      : never
+    readonly [R in keyof RelationsOf<M> & string]: RelationsOf<M>[R] extends Relation ? { readonly model: RelationsOf<M>[R]["model"] } : never
   }
 }

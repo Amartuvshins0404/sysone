@@ -18,13 +18,14 @@ const ticket = defineModel({
     status: z.enum(["open", "pending", "closed"]),
     priority: z.number().int(),
     assigneeId: z.uuid().nullable(),
+    reporterId: z.uuid(),
     createdAt: z.date(),
   }),
   write: ["title", "status", "priority", "assigneeId"],
   search: ["title"],
   filter: ["status", "priority", "assigneeId", "createdAt"],
   sort: ["priority", "createdAt"],
-  relations: { assignee: { model: "user", key: "assigneeId" } },
+  relations: { assignee: { model: "user", key: "assigneeId" }, reporter: { model: "user", key: "reporterId" } },
   access: () => ({ read: true, update: true }),
 })
 
@@ -72,6 +73,10 @@ export function invalid() {
     useSelect(db.ticket, { label: "nope" }),
     // @ts-expect-error a relation that was not included is not on the item
     plain.items[0]?.assignee,
+    // @ts-expect-error cursor is not a list param, loadMore pages
+    useList(db.ticket, { cursor: "x" }),
+    // @ts-expect-error an included row is null when the caller may not read it, even for a non-null key
+    useList(db.ticket, { include: ["reporter"] }).items[0]!.reporter.name,
     // @ts-expect-error project is not a served model
     db.project,
   ]

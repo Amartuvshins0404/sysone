@@ -85,7 +85,6 @@ export function OpenTickets() {
 | `sort` | Up to 3 sort fields. See [Sort](./querying.md#sort). |
 | `include` | Relations to join into each item. |
 | `limit` | Rows per page. |
-| `cursor` | Accepted by the type, but ignored in 0.1.0. Lists always start at the first page. |
 
 | Option | Default | Meaning |
 |---|---|---|
