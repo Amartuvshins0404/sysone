@@ -40,6 +40,7 @@ export type Seed = typeof seed
 const sources = {
   "drizzle-pg": async () => (await import("./sources/drizzle.ts")).pgModels(seed),
   "drizzle-mysql": async () => (await import("./sources/drizzle.ts")).mysqlModels(seed),
+  prisma: async () => (await import("./sources/prisma.ts")).models(seed),
 }
 
 const source = process.env.SOURCE as keyof typeof sources | undefined

@@ -1,78 +1,72 @@
-import type { Row, SourceFactory } from "sysonejs/server"
+import { escapeLike, expandAfter, type Binding, type Cond, type Store, type Row, type Source } from "sysonejs/source"
 
-export interface Delegate {
-  findMany(args: any): Promise<any[]>
-  findUnique(args: any): Promise<any>
-  create(args: any): Promise<any>
-  update(args: any): Promise<any>
-  deleteMany(args: any): Promise<{ count: number }>
+export interface Delegate<R> {
+  findMany(args: object): Promise<R[]>
+  findFirst(args: object): Promise<R | null>
+  create(args: object): Promise<R>
+  updateMany(args: object): Promise<{ count: number }>
+  deleteMany(args: object): Promise<{ count: number }>
 }
 
 export interface PrismaOptions {
-  insensitive?: boolean
+  readonly provider?: "postgresql" | "mysql"
 }
 
-const missing = (e: any) => e?.code === "P2025" || e?.code === "P2023"
+type Where = { readonly [key: string]: unknown }
 
-function anyOf(f: string, vs: unknown[]) {
-  const values = vs.filter((v) => v !== null)
-  const parts: Row[] = values.length === 1 ? [{ [f]: values[0] }] : values.length ? [{ [f]: { in: values } }] : []
-  if (values.length < vs.length) parts.push({ [f]: null })
-  return parts.length === 1 ? parts[0]! : { OR: parts }
+export function prisma<R extends object>(delegate: Delegate<R>, options: PrismaOptions = {}): Source<R> {
+  const insensitive = (options.provider ?? "postgresql") === "postgresql"
+  return { name: "prisma", bind: (binding) => prismaStore(delegate as unknown as Delegate<Row>, binding, insensitive) }
 }
 
-export function prisma(delegate: Delegate, opts: PrismaOptions = {}): SourceFactory {
-  const mode = opts.insensitive === false ? {} : { mode: "insensitive" }
-  return (model) => {
-    const id = model.id
-    const select = Object.fromEntries(model.keys.map((k) => [k, true]))
-    const get = async (v: unknown): Promise<Row | null> => {
-      try {
-        return await delegate.findUnique({ where: { [id]: v }, select })
-      } catch (e) {
-        if (missing(e)) return null
-        throw e
-      }
+function prismaStore(delegate: Delegate<Row>, binding: Binding, insensitive: boolean): Store {
+  const selectOf = (fields: readonly string[]) => Object.fromEntries(fields.map((f) => [f, true]))
+  const every = selectOf(binding.fields.map((f) => f.name))
+  const first = (where: Where) => delegate.findFirst({ where, select: every })
+  return {
+    find: (plan) =>
+      delegate.findMany({
+        where: plan.where ? toWhere(plan.where, insensitive) : undefined,
+        orderBy: plan.sort.map((k) => ({ [k.field]: k.dir })),
+        take: plan.take,
+        select: plan.select.length === binding.fields.length ? every : selectOf(plan.select),
+      }),
+    insert: (row) => delegate.create({ data: row, select: every }),
+    async update(cond, patch) {
+      const where = toWhere(cond, insensitive)
+      if (Object.keys(patch).length) await delegate.updateMany({ where, data: patch })
+      return first(where)
+    },
+    async remove(cond) {
+      return (await delegate.deleteMany({ where: toWhere(cond, insensitive) })).count > 0
+    },
+  }
+}
+
+function toWhere(cond: Cond, insensitive: boolean): Where {
+  switch (cond.op) {
+    case "and":
+      return { AND: cond.of.map((c) => toWhere(c, insensitive)) }
+    case "or":
+      return { OR: cond.of.map((c) => toWhere(c, insensitive)) }
+    case "eq":
+      return { [cond.field]: { equals: cond.value } }
+    case "gt":
+    case "gte":
+    case "lt":
+    case "lte":
+      return { [cond.field]: { [cond.op]: cond.value } }
+    case "in":
+      return { [cond.field]: { in: cond.values } }
+    case "null":
+      return { [cond.field]: null }
+    case "contains": {
+      const match = insensitive ? { contains: escapeLike(cond.term), mode: "insensitive" } : { contains: escapeLike(cond.term) }
+      return { OR: cond.fields.map((f) => ({ [f]: match })) }
     }
-    return {
-      exact: true,
-      async list(q) {
-        const AND: Row[] = []
-        if (q.search) AND.push({ OR: q.search.fields.map((f) => ({ [f]: { contains: q.search!.term, ...mode } })) })
-        for (const f in q.filter) AND.push(anyOf(f, q.filter[f]!))
-        const s = q.sort.field
-        const op = q.sort.dir === "asc" ? "gt" : "lt"
-        if (q.after)
-          AND.push(
-            s === id
-              ? { [id]: { [op]: q.after.id } }
-              : { OR: [{ [s]: { [op]: q.after.value } }, { [s]: q.after.value, [id]: { [op]: q.after.id } }] },
-          )
-        return delegate.findMany({
-          where: { AND },
-          orderBy: s === id ? [{ [id]: q.sort.dir }] : [{ [s]: q.sort.dir }, { [id]: q.sort.dir }],
-          take: q.limit + 1,
-          select,
-        })
-      },
-      get,
-      create: (data) => delegate.create({ data, select }),
-      async update(v, data) {
-        try {
-          return await delegate.update({ where: { [id]: v }, data, select })
-        } catch (e) {
-          if (missing(e)) return null
-          throw e
-        }
-      },
-      async delete(v) {
-        try {
-          return (await delegate.deleteMany({ where: { [id]: v } })).count > 0
-        } catch (e) {
-          if (missing(e)) return false
-          throw e
-        }
-      },
-    }
+    case "after":
+      return toWhere(expandAfter(cond), insensitive)
+    default:
+      return cond satisfies never
   }
 }

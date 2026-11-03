@@ -6,6 +6,7 @@ type Open = (binding: Binding, seed: readonly Row[]) => Promise<Store>
 const sources: { readonly [name: string]: () => Promise<Open> } = {
   "drizzle-pg": async () => (await import("../examples/express/src/sources/drizzle.ts")).pgItem,
   "drizzle-mysql": async () => (await import("../examples/express/src/sources/drizzle.ts")).mysqlItem,
+  prisma: async () => (await import("../examples/express/src/sources/prisma.ts")).item,
 }
 
 const names = process.argv.slice(2)
