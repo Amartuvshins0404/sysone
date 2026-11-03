@@ -91,8 +91,7 @@ Search is debounced, pages load on scroll, and the selected item shows even if i
 |---|---|
 | `@sysonejs/drizzle` | Drizzle on Postgres or MySQL |
 | `@sysonejs/prisma` | Prisma on Postgres (MySQL: pass `{ insensitive: false }`, not tested yet) |
-| `@sysonejs/pg` | node-postgres, no ORM |
-| `@sysonejs/mysql` | mysql2, no ORM |
+| `@sysonejs/sql` | `pg(pool, table)` for node-postgres, `mysql(pool, table)` for mysql2, no ORM |
 | `@sysonejs/mongo` | MongoDB driver |
 | `memory()` in `sysonejs/server` | prototypes and demos |
 

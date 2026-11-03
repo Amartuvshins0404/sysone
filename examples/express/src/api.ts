@@ -1,5 +1,6 @@
 import { memory, sysone } from "sysonejs"
 import { category, project, secret, task } from "./model.ts"
+import { sqlSources } from "./sources/sql.ts"
 
 const day = (d: number) => new Date(Date.UTC(2026, 0, d))
 
@@ -32,14 +33,18 @@ const tasks = [
   { id: 4, projectId: "p1", title: "Plan" },
 ]
 
+const secrets = [{ id: 1, value: "hidden" }]
+
+const SOURCE = process.env.SOURCE ?? "memory"
+
+const sources =
+  SOURCE === "pg" || SOURCE === "mysql"
+    ? await sqlSources(SOURCE, { category: categories, project: projects, task: tasks, secret: secrets })
+    : { category: memory(categories), project: memory(projects), task: memory(tasks), secret: memory(secrets) }
+
 export const api = sysone({
   basePath: "/api",
-  models: [
-    category.from(memory(categories)),
-    project.from(memory(projects)),
-    task.from(memory(tasks)),
-    secret.from(memory([{ id: 1, value: "hidden" }])),
-  ],
+  models: [category.from(sources.category), project.from(sources.project), task.from(sources.task), secret.from(sources.secret)],
 })
 
 export type Api = typeof api
