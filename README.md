@@ -1,6 +1,6 @@
 # sysone
 
-**Describe your data once. Get a safe REST API on the server and ready-to-use React hooks in the browser.**
+**Describe your data once. Get a REST API with access rules on the server and ready-to-use React hooks in the browser.**
 
 ```sh
 npm i sysonejs @sysonejs/react zod
@@ -38,8 +38,8 @@ You write one model: its fields (a Zod schema), what clients may search, filter,
   DELETE /api/category/:id
 ```
 
-- **Safe by default.** A model with no access rule is closed. Rules like `{ tenantId: user.tenantId }` are added to every database query, including updates and deletes.
-- **Typed end to end.** The browser imports only the API's TypeScript type. Filtering by a field that isn't allowed is a compile error, not a runtime surprise.
+- **Closed by default.** A model with no access rule answers every request with `403`. sysone adds rules like `{ tenantId: user.tenantId }` to every database query, including updates and deletes.
+- **Typed end to end.** The browser imports only the API's TypeScript type. Filtering by a field that isn't allowed is a compile error.
 - **Small.** The browser gets 2.6 KB of sysone. Zod, your models and database drivers never reach the browser.
 - **Fast.** List endpoints serve more requests per second than a hand-written Express route ([numbers](#numbers)).
 - **Your database.** Postgres, MySQL, MongoDB, Prisma or Drizzle. All of them pass one shared test suite.
@@ -47,9 +47,9 @@ You write one model: its fields (a Zod schema), what clients may search, filter,
 
 ## Example
 
-A category dropdown with search, paging and the parent's name, from database to screen.
+This example builds a category dropdown with search, paging and each category's parent name.
 
-**1. Define the model.** This file lives on the server.
+**1. Define the model.** This file runs on the server.
 
 <!-- file: model.ts -->
 ```ts
@@ -127,7 +127,7 @@ export function CategoryPicker(props: { value: number | null; onChange: (id: num
 }
 ```
 
-That is the whole feature. Search waits until you stop typing, "More" loads the next page, and the selected category shows even when it is not on the loaded page. Works with any UI kit: pass `options`, `selected` and `onSearch` to your own Select or Combobox.
+You write no fetch code, paging logic or debounce. Search waits 250 ms after the last keystroke. "More" loads the next page. The selected category shows even when it is not on the loaded page. To use your own UI kit, pass `options`, `selected` and `onSearch` to its Select or Combobox.
 
 ## Good fit, bad fit
 
@@ -174,20 +174,22 @@ Start with [Getting started](./docs/getting-started.md), a five-minute tutorial.
 
 ## Numbers
 
-Measured on an Apple M4 with Node 26. Every number can be reproduced with the command next to it.
+We measured on an Apple M4 with Node 26. You can reproduce every number with the command next to it.
 
 | What | Result |
 |---|---|
 | sysone in a real React app's bundle (`pnpm --filter example-web size`) | **2.62 KB** brotli |
 | Runtime dependencies | **0** |
-| List requests per second, hand-written Express route (`pnpm bench:http`) | 33.9–40.7k |
-| List requests per second, sysone | **47.6–49.9k** |
+| List requests per second, hand-written Express route (`pnpm bench:http`) | 33.9k to 40.7k |
+| List requests per second, sysone | **47.6k to 49.9k** |
 
-sysone wins on speed because it formats dates itself: `JSON.stringify` spends 11.4 µs on 20 rows with `Date` fields and 1.0 µs with ISO strings. The API is plain REST and JSON, written down in [SPEC.md](./SPEC.md) with 91 test cases, so servers and clients in other languages can follow it.
+sysone is faster because it formats dates itself. `JSON.stringify` spends 11.4 µs on 20 rows with `Date` fields and 1.0 µs on the same rows with ISO strings.
+
+The API is plain REST and JSON. [SPEC.md](./SPEC.md) describes it and ships 91 test cases, so servers and clients in other languages can follow it.
 
 ## Status
 
-v0.1, early. The API may change before 1.0. Issues and pull requests are welcome, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+v0.1, early. The API may change before 1.0. Issues and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
