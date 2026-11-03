@@ -1,39 +1,55 @@
 # sysone
 
-Define a data model once. Get scoped REST endpoints on the server and typed hooks in the browser.
-
-```
-server   defineModel(category)  →  GET/POST/PATCH/DELETE /api/category
-         export type Api
-browser  createClient<Api>()    →  useSelect(db.category) → <Select />
-         (import type only: no Zod, no models in the bundle)
-```
-
-- **Tiny where it counts:** a real React app ships 2.62 KB brotli of sysone. No Zod, no models, no drivers reach the browser.
-- **Fast:** list endpoints serve more requests per second than a hand-written Express route (47–50k vs 34–41k req/s, see Numbers).
-- **Safe by default:** a model with no `access` rule is closed. Rules scope rows per tenant or owner, and writes carry the scope in the same database statement.
-- **Any database:** Postgres, MySQL, MongoDB, Prisma, Drizzle. All pass one shared test suite.
-- **Any runtime:** Node and Bun. Express, plain `node:http`, or anything that speaks `fetch` (Bun.serve, Hono, Elysia).
-- **Open spec:** plain REST + JSON in [SPEC.md](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md), with 91 JSON test cases any server in any language can run.
+**Describe your data once. Get a safe REST API on the server and ready-to-use React hooks in the browser.**
 
 ```sh
 npm i sysonejs @sysonejs/react zod
 ```
 
-> Status: v0.1, early.
+[![npm](https://img.shields.io/npm/v/sysonejs)](https://www.npmjs.com/package/sysonejs) [![CI](https://github.com/Amartuvshins0404/sysone/actions/workflows/ci.yml/badge.svg)](https://github.com/Amartuvshins0404/sysone/actions/workflows/ci.yml) ![browser size](https://img.shields.io/badge/browser-2.6%20KB-brightgreen) ![license](https://img.shields.io/npm/l/sysonejs)
 
-## Documentation
+## The problem
 
-Start with [Getting started](https://github.com/Amartuvshins0404/sysone/blob/main/docs/getting-started.md), a five-minute tutorial. The [docs index](https://github.com/Amartuvshins0404/sysone/blob/main/docs/README.md) lists every page:
+Almost every app shows lists of data: a category dropdown, a users table, a project picker, an infinite feed. Each one needs the same code, written again for every model:
 
-| Server | Browser | Reference |
-|---|---|---|
-| [Models](https://github.com/Amartuvshins0404/sysone/blob/main/docs/models.md) | [Querying lists](https://github.com/Amartuvshins0404/sysone/blob/main/docs/querying.md) | [Limitations](https://github.com/Amartuvshins0404/sysone/blob/main/docs/limitations.md) |
-| [Access rules](https://github.com/Amartuvshins0404/sysone/blob/main/docs/access.md) | [Client](https://github.com/Amartuvshins0404/sysone/blob/main/docs/client.md) | [Wire spec](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md) |
-| [Servers](https://github.com/Amartuvshins0404/sysone/blob/main/docs/servers.md) | [React hooks](https://github.com/Amartuvshins0404/sysone/blob/main/docs/react.md) | [Changelog](https://github.com/Amartuvshins0404/sysone/blob/main/CHANGELOG.md) |
-| [Sources](https://github.com/Amartuvshins0404/sysone/blob/main/docs/sources.md), [Writing a source](https://github.com/Amartuvshins0404/sysone/blob/main/docs/writing-a-source.md) | | [Contributing](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md) |
+| On the server | In the browser |
+|---|---|
+| An endpoint that reads search, filters, sort and paging from the URL | `fetch` calls, loading and error state |
+| Checks on who may see or change which rows | Debounced search, "load more" |
+| Validation of what a client sends | Keeping the selected item visible in a dropdown |
+| Hiding columns that must never leave the server | Refreshing the right lists after an edit |
 
-## 1. Define (server)
+It is boring to write and easy to get wrong. Forget one tenant filter and one customer sees another customer's data.
+
+## What sysone does
+
+You write one model: its fields (a Zod schema), what clients may search, filter, sort and write, and who may access which rows. sysone turns it into everything in the table above.
+
+```
+          defineModel(category)
+                   │
+     ┌─────────────┴──────────────┐
+     ▼                            ▼
+  server                       browser
+  GET    /api/category          useSelect(db.category)  → dropdowns, pickers
+  GET    /api/category/:id      useList(db.category)    → tables, feeds
+  POST   /api/category          useGet(db.category, id) → detail pages
+  PATCH  /api/category/:id      db.category.create / update / delete
+  DELETE /api/category/:id
+```
+
+- **Safe by default.** A model with no access rule is closed. Rules like `{ tenantId: user.tenantId }` are added to every database query, including updates and deletes.
+- **Typed end to end.** The browser imports only the API's TypeScript type. Filtering by a field that isn't allowed is a compile error, not a runtime surprise.
+- **Small.** The browser gets 2.6 KB of sysone. Zod, your models and database drivers never reach the browser.
+- **Fast.** List endpoints serve more requests per second than a hand-written Express route ([numbers](#numbers)).
+- **Your database.** Postgres, MySQL, MongoDB, Prisma or Drizzle. All of them pass one shared test suite.
+- **Your server.** Express, plain Node, Bun, Hono or Elysia.
+
+## Example
+
+A category dropdown with search, paging and the parent's name, from database to screen.
+
+**1. Define the model.** This file lives on the server.
 
 <!-- file: model.ts -->
 ```ts
@@ -59,11 +75,9 @@ export const category = defineModel({
 })
 ```
 
-- `write` is what a client may send. Everything else is set by the server.
-- `access(ctx)` returns, per action, `true`, `false`, or a row match like `{ tenantId: ctx.tenantId }`.
-- Sorting on a nullable field, or filtering outside `filter`, is a compile error.
+Everyone can read. Only admins can create and edit. Clients can send `name` and `parentId`, nothing else.
 
-## 2. Serve
+**2. Serve it.**
 
 <!-- file: server.ts -->
 ```ts
@@ -81,13 +95,9 @@ app.use(nodeHandler(api, { context: () => null }))
 app.listen(3000)
 ```
 
-`context` turns each request into the `ctx` that access rules see. Read your session there. Swap `memory()` for `drizzle(db, table)`, `prisma(db.category)`, `pg(pool, "categories")`, or `mongo(collection)` to use a database.
+`memory()` keeps rows in memory, which is handy for trying things out. For a real database, swap it for `drizzle(db, table)`, `prisma(db.category)`, `pg(pool, "categories")` or `mongo(collection)`. `context` is where you read the logged-in user from the request.
 
-Bun, Hono, Elysia: `fetchHandler(api, { context })` from `sysonejs`.
-
-With Drizzle, Prisma, and MongoDB, `.from(source)` checks at compile time that the table has a column for every model field. Columns outside the schema are never selected or sent.
-
-## 3. Use (browser)
+**3. Use it in React.**
 
 <!-- file: picker.tsx -->
 ```tsx
@@ -117,49 +127,67 @@ export function CategoryPicker(props: { value: number | null; onChange: (id: num
 }
 ```
 
-| Hook | For |
-|---|---|
-| `useSelect(ref, { label, value })` | Select, combobox, relation picker. Shows the selected item even when it is not on the loaded page. |
-| `useList(ref, { search, filter, sort, include, limit })` | Tables, feeds, infinite lists |
-| `useGet(ref, id, { include })` | Detail pages |
-| `ref.create / update / delete` | Writes. Each row is cached once, so an edit shows everywhere. Lists reload only when the edit affects them. |
+That is the whole feature. Search waits until you stop typing, "More" loads the next page, and the selected category shows even when it is not on the loaded page. Works with any UI kit: pass `options`, `selected` and `onSearch` to your own Select or Combobox.
 
-## Sources
+## Good fit, bad fit
 
-| Package | Works with |
+| sysone is a good fit for | Look elsewhere if you need |
 |---|---|
+| Admin panels, dashboards, internal tools | Deeply nested queries in one request (GraphQL) |
+| SaaS apps where each customer sees only their own rows | Reports with totals, grouping and page numbers |
+| Forms with dropdowns and relation pickers | Realtime sync between users |
+| Teams that want one typed source of truth for list endpoints | Server-side rendering of the hooks (not yet) |
+
+The full list is in [Limitations](https://github.com/Amartuvshins0404/sysone/blob/main/docs/limitations.md).
+
+## How it compares
+
+| | You write per model | Row access rules | React hooks | Your own database and server |
+|---|---|---|---|---|
+| Hand-written routes + fetch | everything | by hand | by hand | yes |
+| tRPC / oRPC | each procedure | by hand | via TanStack Query | yes |
+| Refine | the backend | backend's job | yes | yes |
+| PostgREST / Supabase | SQL policies | yes (Postgres RLS) | client SDK | Postgres only |
+| **sysone** | **one model** | **built in** | **yes** | **yes** |
+
+## Documentation
+
+Start with [Getting started](https://github.com/Amartuvshins0404/sysone/blob/main/docs/getting-started.md), a five-minute tutorial. Then:
+
+| Server | Browser | Reference |
+|---|---|---|
+| [Models](https://github.com/Amartuvshins0404/sysone/blob/main/docs/models.md) | [Querying lists](https://github.com/Amartuvshins0404/sysone/blob/main/docs/querying.md) | [Limitations](https://github.com/Amartuvshins0404/sysone/blob/main/docs/limitations.md) |
+| [Access rules](https://github.com/Amartuvshins0404/sysone/blob/main/docs/access.md) | [Client](https://github.com/Amartuvshins0404/sysone/blob/main/docs/client.md) | [Wire spec](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md) |
+| [Servers](https://github.com/Amartuvshins0404/sysone/blob/main/docs/servers.md) | [React hooks](https://github.com/Amartuvshins0404/sysone/blob/main/docs/react.md) | [Changelog](https://github.com/Amartuvshins0404/sysone/blob/main/CHANGELOG.md) |
+| [Sources](https://github.com/Amartuvshins0404/sysone/blob/main/docs/sources.md), [Writing a source](https://github.com/Amartuvshins0404/sysone/blob/main/docs/writing-a-source.md) | | [Contributing](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md) |
+
+## Packages
+
+| Package | What it is |
+|---|---|
+| `sysonejs` | Models, server, and the browser client (`sysonejs/client`) |
+| `@sysonejs/react` | `useSelect`, `useList`, `useGet` |
 | `@sysonejs/drizzle` | Drizzle on Postgres or MySQL |
-| `@sysonejs/prisma` | Prisma on Postgres (MySQL option exists, untested) |
-| `@sysonejs/sql` | `pg(pool, table)` for node-postgres, `mysql(pool, table)` for mysql2 |
+| `@sysonejs/prisma` | Prisma on Postgres |
+| `@sysonejs/sql` | node-postgres or mysql2, no ORM |
 | `@sysonejs/mongo` | MongoDB driver |
-| `memory()` from `sysonejs` | prototypes, tests |
-
-The core turns paging, filters, search and access rules into one small condition tree. A source only translates that tree, so a new one is about 60–120 lines. `testSource` from `sysonejs/source` checks it. See [Writing a source](https://github.com/Amartuvshins0404/sysone/blob/main/docs/writing-a-source.md).
 
 ## Numbers
 
-Apple M4, Node 26. Reproduce with the commands shown.
+Measured on an Apple M4 with Node 26. Every number can be reproduced with the command next to it.
 
-| Browser (`pnpm --filter example-web size`, a real React entry, only React external) | brotli |
+| What | Result |
 |---|---|
-| sysone v1 | **2.62 KB** |
-| sysone v0, for comparison (shared Zod model) | 76.62 KB |
+| sysone in a real React app's bundle (`pnpm --filter example-web size`) | **2.62 KB** brotli |
+| Runtime dependencies | **0** |
+| List requests per second, hand-written Express route (`pnpm bench:http`) | 33.9–40.7k |
+| List requests per second, sysone | **47.6–49.9k** |
 
-| Server (`pnpm size`) | brotli |
-|---|---|
-| sysonejs core, Zod excluded (server peer) | 5.18 KB |
+sysone wins on speed because it formats dates itself: `JSON.stringify` spends 11.4 µs on 20 rows with `Date` fields and 1.0 µs with ISO strings. The API is plain REST and JSON, written down in [SPEC.md](https://github.com/Amartuvshins0404/sysone/blob/main/SPEC.md) with 91 test cases, so servers and clients in other languages can follow it.
 
-| HTTP list, 50 connections, 3 runs (`pnpm bench:http`) | req/s |
-|---|---|
-| hand-written Express route | 33.9–40.7k |
-| sysone, no params | 47.6–49.9k |
-| sysone, search + 3 filters + sort | 43.5–45.6k |
+## Status
 
-sysone is faster than the hand-written route because it formats dates itself. `JSON.stringify` on 20 rows with `Date` fields takes 11.4 µs; with ISO strings it takes 1.0 µs.
-
-## Develop
-
-See [CONTRIBUTING.md](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md) for setup, the local databases, and the checks CI runs.
+v0.1, early. The API may change before 1.0. Issues and pull requests are welcome, see [CONTRIBUTING.md](https://github.com/Amartuvshins0404/sysone/blob/main/CONTRIBUTING.md).
 
 ## License
 
