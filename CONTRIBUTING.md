@@ -103,3 +103,15 @@ Pages live in `docs/*.md`. The docs check extracts each `ts` and `tsx` block and
 - Add or update a spec case in `spec/cases` when you change wire behavior, and update `SPEC.md` with it.
 - Update the docs page that describes the behavior you changed.
 - Code has no comments. Name things so the code reads on its own.
+
+## Releasing
+
+Every merge to `main` runs CI. If CI passes, the `release` job publishes any package version that is not on npm yet, then creates the git tag and a GitHub release with the matching `CHANGELOG.md` section. A merge that does not change the version publishes nothing.
+
+To release:
+
+1. In a pull request, run `pnpm release:version patch` (or `minor`, `major`). All packages share one version.
+2. Rename `## Unreleased` in `CHANGELOG.md` to `## <version> (<date>)`.
+3. Merge. CI publishes to npm with provenance through npm trusted publishing. No npm token is stored in GitHub.
+
+One-time setup, already done for the current packages: an npm owner runs `bash scripts/trust.sh`, which links each package to this repo's `ci.yml`. A new package needs the same step before its first release, and a place in the order list in `scripts/release.ts`.

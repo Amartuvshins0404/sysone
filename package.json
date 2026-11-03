@@ -8,7 +8,8 @@
     "typecheck": "pnpm -r --filter \"./packages/*\" typecheck",
     "size": "size-limit",
     "bench": "node bench/server.bench.ts",
-    "bench:http": "node bench/http.bench.ts"
+    "bench:http": "node bench/http.bench.ts",
+    "release:version": "pnpm -r --filter \"./packages/*\" exec npm version --no-git-tag-version"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^14.3.0",

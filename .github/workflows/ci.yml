@@ -17,3 +17,30 @@ jobs:
       - run: pnpm --filter docs-examples check
       - run: |
           cd examples/express && (PORT=3000 node src/server.ts &) && sleep 3 && cd ../.. && node spec/run.ts http://localhost:3000
+      - run: node scripts/release.ts --dry-run
+
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: 24, cache: pnpm, registry-url: "https://registry.npmjs.org" }
+      - run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/release.ts
+      - name: Tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="v$(node -p "require('./packages/core/package.json').version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/$v" >/dev/null; then exit 0; fi
+          awk -v h="## ${v#v} " 'index($0, h) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md > notes.md
+          gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes-file notes.md
