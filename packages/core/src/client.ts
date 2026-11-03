@@ -49,6 +49,7 @@ export type LiveGet<T> = Live<GetSnapshot<T>>
 type Includes<C extends ModelContract> = readonly RelationName<C>[]
 
 export interface Ref<Cs extends Contracts, N extends keyof Cs & string> {
+  readonly "~ref"?: readonly [Cs, N]
   create(data: Cs[N]["create"]): Promise<Cs[N]["row"]>
   update(id: Cs[N]["id"], patch: Cs[N]["patch"]): Promise<Cs[N]["row"]>
   delete(id: Cs[N]["id"]): Promise<void>
