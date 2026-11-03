@@ -1,52 +1,73 @@
-# sysone wire spec v0
+# sysone wire spec v1
 
-Any server in any language that follows this spec works with every sysone client (React hooks today, others later).
+Any server in any language that follows this spec works with every sysone client. The JSON cases in `spec/cases/*.json` are the executable form of this document: `node spec/run.ts <baseUrl>` checks a running server against all of them.
 
 ## Model
 
-A model has a `name`, a set of fields, one `id` field, and three allowlists:
+A model has a `name`, typed fields, one `id` field, and these lists:
 
-| Allowlist | Used by |
+| List | Meaning |
 |---|---|
-| `search` | fields matched by `?search=` (case-insensitive "contains") |
-| `filter` | fields allowed in `?filter[field]=` |
-| `sort` | fields allowed in `?sort=` (the id field is always allowed) |
+| `write` | Fields a client may send on create and update. Everything else is set by the server. |
+| `search` | String fields matched by `?search=` (case-insensitive "contains"). |
+| `filter` | Fields allowed in `?filter[field]=`. |
+| `sort` | Non-null fields allowed in `?sort=`. The id is always allowed. |
+| `relations` | Belongs-to links (`name → { model, key }`) usable in `?include=`. |
 
-Only model fields ever leave the server. Anything else on the row (passwords, internal columns) is dropped.
+Only model fields leave the server. Other columns (password hashes, internal fields) are never selected or sent.
 
 ## Endpoints
 
-Mounted under a prefix, e.g. `/api`.
+Mounted under a base path, e.g. `/api`.
 
 | Method | Path | Action | Success |
 |---|---|---|---|
-| GET | `/{name}` | list | `200 { items, next }` |
-| GET | `/{name}/{id}` | get | `200 item` |
-| POST | `/{name}` | create | `201 item` |
-| PATCH | `/{name}/{id}` | update | `200 item` |
+| GET | `/{name}` | list | `200 { items, next, meta, included? }` |
+| GET | `/{name}/{id}` | get | `200 { item, meta, included? }` |
+| POST | `/{name}` | create | `201 { item, meta }` |
+| PATCH | `/{name}/{id}` | update | `200 { item, meta }` |
 | DELETE | `/{name}/{id}` | delete | `204` |
 
-Paths with no matching model fall through (the next handler runs).
+Paths with no matching model fall through to the next handler. A client treats `404` on delete as done, so delete is idempotent.
 
 ## List query
 
 | Param | Example | Rule |
 |---|---|---|
 | `search` | `search=red` | Case-insensitive contains, OR across `search` fields. `%` and `_` are literal. |
-| `filter[f]` | `filter[status]=open` | Repeat for "any of": `filter[status]=open&filter[status]=done`. `null` means empty. |
-| `sort` | `sort=-createdAt` | One field. `-` means descending. Ties broken by id in the same direction. |
-| `limit` | `limit=50` | Integer ≥ 1. Server default 20, capped at the model's max (default 100). |
-| `cursor` | `cursor=…` | Value of `next` from the previous page. Only valid with the same `sort`. |
+| `filter[f]` | `filter[status]=open` | Repeat for "any of". `null` matches empty. |
+| `filter[f][op]` | `filter[createdAt][gte]=2026-10-01T00:00:00.000Z` | `gt`, `gte`, `lt`, `lte` on string, number, date and bigint fields. |
+| `sort` | `sort=-priority,createdAt` | Up to 3 fields. `-` is descending. The id is appended as a tiebreak. |
+| `include` | `include=parent` | Comma-separated relation names. |
+| `limit` | `limit=50` | Integer ≥ 1. Default 20, capped at the model's max (default 100). |
+| `cursor` | `cursor=…` | The `next` value from the previous page. Only valid with the same `sort`. |
 
-Values are sent as strings and coerced to the field type: numbers, `true`/`false`, ISO dates, bigint.
-
-Paging is keyset (cursor) based, never offset. Sort fields should be non-null.
-
-`next` is an opaque string, or `null` on the last page. Clients must not build or read it.
+Paging is keyset (cursor) based, never offset. `next` is opaque, or `null` on the last page.
 
 ## Values on the wire
 
-JSON. Dates are ISO 8601 strings. Clients turn date fields back into native dates.
+JSON. Dates are ISO 8601 strings. Bigints are decimal strings. Booleans are `true`/`false` on every database.
+
+`meta` tells the client how to read rows, per model: `{ id, types?: { field: "date" | "bigint" }, links?: { relation: [model, key] } }`. Clients use it to turn strings back into native dates and bigints and to join included rows. They need no schema.
+
+`included` holds related rows by model name, loaded in one batch per page. Each related row passed its own model's read rule. A related row the caller may not read is left out, and the relation resolves to `null`.
+
+On create and update, writable date and bigint fields are accepted as ISO strings and decimal strings.
+
+## Access
+
+Each request calls the model's `access(ctx)` once. It returns a rule per action:
+
+| Rule | Effect |
+|---|---|
+| missing or `false` | `403 forbidden` |
+| `true` | All rows |
+| `{ field: value }` or `{ field: [values] }` | Only matching rows. Several matches in an array means OR. |
+
+- A model with no `access` denies every action.
+- Reads, updates and deletes carry the match in the same database statement. A row outside the match looks exactly like a missing row: `404`, never `403`.
+- On create, match values are written into the row. A body that sets a different value gets `403`.
+- An update that would move a row outside its match gets `403`.
 
 ## Errors
 
@@ -56,26 +77,22 @@ JSON. Dates are ISO 8601 strings. Clients turn date fields back into native date
 
 | Status | Codes |
 |---|---|
-| 400 | `invalid_limit` `invalid_sort` `invalid_filter` `invalid_search` `invalid_cursor` `invalid_value` |
+| 400 | `invalid_limit` `invalid_sort` `invalid_filter` `invalid_search` `invalid_include` `invalid_cursor` `invalid_value` |
 | 403 | `forbidden` |
 | 404 | `not_found` |
 | 405 | `method_not_allowed` |
-| 422 | `invalid_body` (with `issues`) |
-
-## Access
-
-Every request passes one check: `can({ action, ctx, model, id?, data? })`.
-Default: `list` and `get` allowed, writes denied.
+| 422 | `invalid_body`, with `issues: [{ path, message }]` |
 
 ## Efficiency spec
 
-Sizes are enforced in CI (`pnpm size`). Speed is measured with `pnpm bench` and `pnpm bench:http`.
+Checked in CI: `pnpm size`, `pnpm --filter example-web size`. Speed: `pnpm bench`, `pnpm bench:http`.
 
-| Metric | Budget |
-|---|---|
-| `defineModel` (browser) | ≤ 400 B brotli |
-| Client (browser) | ≤ 1.3 KB brotli |
-| React hooks + client (browser) | ≤ 2 KB brotli |
-| Server handler | ≤ 2 KB brotli |
-| Runtime dependencies | 0 (zod, react, db drivers are peers) |
-| HTTP throughput vs hand-written Express route | within 5% |
+| Metric | Budget | Measured (Apple M4, Node 26) |
+|---|---|---|
+| Browser bundle of a real React app, all deps except React | ≤ 2.75 KB brotli | 2.62 KB |
+| Zod, models or drivers in the browser bundle | 0 bytes (CI fails otherwise) | 0 |
+| `sysonejs/client` | ≤ 1.8 KB brotli | 1.77 KB |
+| `@sysonejs/react` | ≤ 650 B brotli | 580 B |
+| Server core, Zod excluded | ≤ 5.5 KB brotli | 5.18 KB |
+| Runtime dependencies, every package | 0 | 0 |
+| HTTP list throughput vs a hand-written Express route | not slower | 11–40% faster across 3 runs |

@@ -12,3 +12,7 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm size
+      - run: pnpm --filter example-web size
+      - run: node spec/source.ts
+      - run: |
+          cd examples/express && (PORT=3000 node src/server.ts &) && sleep 3 && cd ../.. && node spec/run.ts http://localhost:3000

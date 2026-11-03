@@ -1,5 +1,5 @@
 [
-  { "name": "sysonejs: defineModel", "path": "packages/core/dist/index.mjs", "import": "{ defineModel }", "ignore": ["zod"], "limit": "400 B" },
-  { "name": "sysonejs/client", "path": "packages/core/dist/client.mjs", "import": "{ createClient }", "limit": "1.8 KB" },
-  { "name": "@sysonejs/react: all hooks", "path": "packages/react/dist/index.mjs", "import": "*", "ignore": ["react"], "limit": "650 B" }
+  { "name": "browser: sysonejs/client", "path": "packages/core/dist/client.mjs", "import": "{ createClient }", "limit": "1.8 KB" },
+  { "name": "browser: @sysonejs/react hooks", "path": "packages/react/dist/index.mjs", "import": "*", "ignore": ["react"], "limit": "650 B" },
+  { "name": "server: sysonejs core (zod is a server peer)", "path": "packages/core/dist/index.mjs", "import": "*", "ignore": ["zod"], "limit": "5.5 KB" }
 ]
