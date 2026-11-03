@@ -194,9 +194,9 @@ export function createCache(request: Request) {
 
   async function write(m: string, method: string, rawId?: unknown, data?: object): Promise<Row | null> {
     const at = ++clock
-    const body = await request(method, m, rawId, "", data)
     const id = text(rawId)
     const old = rowOf(m, id)
+    const body = await request(method, m, rawId, "", data)
     if (!body) {
       put(m, id, null, at)
       touch(m)
