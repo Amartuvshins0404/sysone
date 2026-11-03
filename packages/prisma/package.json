@@ -1,7 +1,7 @@
 {
   "name": "@sysonejs/prisma",
   "version": "0.0.1",
-  "description": "Prisma source for sysonejs (Postgres, MySQL, MongoDB).",
+  "description": "Prisma source for sysonejs (Postgres, MySQL).",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

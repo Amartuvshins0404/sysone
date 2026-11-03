@@ -53,9 +53,6 @@ importers:
       '@sysonejs/drizzle':
         specifier: workspace:*
         version: link:../../packages/drizzle
-      '@sysonejs/express':
-        specifier: workspace:*
-        version: link:../../packages/express
       '@sysonejs/mongo':
         specifier: workspace:*
         version: link:../../packages/mongo
@@ -127,24 +124,6 @@ importers:
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@electric-sql/pglite@0.4.3)(@prisma/client@7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.23.1)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(postgres@3.4.7)(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))
-      sysonejs:
-        specifier: workspace:*
-        version: link:../core
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
-
-  packages/express:
-    devDependencies:
-      '@types/express':
-        specifier: ^5.0.6
-        version: 5.0.6
-      '@types/node':
-        specifier: ^26.0.0
-        version: 26.6.6
-      express:
-        specifier: ^5.2.1
-        version: 5.3.0
       sysonejs:
         specifier: workspace:*
         version: link:../core

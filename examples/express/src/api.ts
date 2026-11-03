@@ -35,16 +35,30 @@ const tasks = [
 
 const secrets = [{ id: 1, value: "hidden" }]
 
-const SOURCE = process.env.SOURCE ?? "memory"
+export const seed = { categories, projects, tasks, secrets }
+export type Seed = typeof seed
 
-const sources =
-  SOURCE === "pg" || SOURCE === "mysql"
-    ? await sqlSources(SOURCE, { category: categories, project: projects, task: tasks, secret: secrets })
-    : { category: memory(categories), project: memory(projects), task: memory(tasks), secret: memory(secrets) }
+const sql = async (kind: "pg" | "mysql") => {
+  const s = await sqlSources(kind, { category: categories, project: projects, task: tasks, secret: secrets })
+  return [category.from(s.category), project.from(s.project), task.from(s.task), secret.from(s.secret)]
+}
+
+const sources = {
+  pg: () => sql("pg"),
+  mysql: () => sql("mysql"),
+  "drizzle-pg": async () => (await import("./sources/drizzle.ts")).pgModels(seed),
+  "drizzle-mysql": async () => (await import("./sources/drizzle.ts")).mysqlModels(seed),
+  prisma: async () => (await import("./sources/prisma.ts")).models(seed),
+  mongo: async () => (await import("./sources/mongo.ts")).models(seed),
+}
+
+const source = process.env.SOURCE as keyof typeof sources | undefined
 
 export const api = sysone({
   basePath: "/api",
-  models: [category.from(sources.category), project.from(sources.project), task.from(sources.task), secret.from(sources.secret)],
+  models: source
+    ? await sources[source]()
+    : [category.from(memory(categories)), project.from(memory(projects)), task.from(memory(tasks)), secret.from(memory(secrets))],
 })
 
 export type Api = typeof api

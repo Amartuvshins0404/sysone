@@ -11,8 +11,46 @@ model Category {
   id        Int      @id @default(autoincrement())
   name      String
   parentId  Int?     @map("parent_id")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
+  active    Boolean
+  size      BigInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("categories")
+}
+
+model Project {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  ownerId   String   @map("owner_id")
+  name      String
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("projects")
+}
+
+model Task {
+  id        Int    @id @default(autoincrement())
+  projectId String @map("project_id")
+  title     String
+
+  @@map("tasks")
+}
+
+model Secret {
+  id    Int    @id @default(autoincrement())
+  value String
+
+  @@map("secrets")
+}
+
+model Item {
+  id   Int      @id @default(autoincrement())
+  name String
+  tag  String?
+  n    Int
+  at   DateTime @db.Timestamptz
+  flag Boolean
+
+  @@map("item")
 }
